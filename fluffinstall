@@ -1,0 +1,223 @@
+#!/bin/bash
+
+if [[ $EUID -ne 0 ]]; then
+    echo "This script must be run as root. Attempting to re-execute as root..."
+    sudo su -c "bash $0 $@"
+    exit 0
+fi
+
+clear #clears the screen before running the installer
+
+echo "fluffinstall 0.3 - Fluff Linux Installer"
+echo
+#echo "NOTE: CURRENTLY, THE INSTALLER REQUIRES NETWORK CONNECTION. MAKE SURE YOU'RE CONNECTED TO THE INTERNET BEFORE CONTINUING "
+echo -e "\e[31mNOTE: CURRENTLY, THE INSTALLER REQUIRES AN INTERNET CONNECTION. MAKE SURE YOU'RE CONNECTED TO THE INTERNET BEFORE CONTINUING\e[0m"
+echo
+echo "Press CTRL+C to exit"
+echo "Press any key to continue with the installer"
+read -n 1 -s -r -p ""
+clear
+echo "Firstly, we want to select our target drive.."
+sleep 1
+echo
+echo
+echo
+lsblk -d --output NAME,MODEL,SIZE,TYPE --noheadings | grep ' disk$'
+echo
+echo
+read -p "Enter the name of the target drive you want to install Fluff Linux on. for example: 'sda': /dev/" TARGETDISK
+
+
+
+# Validate input (check if the device exists)
+if [[ ! -b "/dev/$TARGETDISK" ]]; then
+    echo -e "\e[31mError: /dev/$TARGETDISK is not a valid block device.\e[0m"
+    exit 1
+
+fi
+
+# Save the full path in memory
+TARGETDISK="/dev/$TARGETDISK"
+
+# Determine partition naming convention
+if [[ "$TARGETDISK" == *nvme* ]] || [[ "$TARGETDISK" == *mmcblk* ]]; then
+    PART_SUFFIX="p"
+else
+    PART_SUFFIX=""
+fi
+
+echo
+#Display Choice
+
+echo "You have selected: $TARGETDISK"
+echo
+echo "If this isn't the correct drive, Please press Ctrl+C and restart the installer"
+echo
+echo -e "\e[1;31mTHIS WILL FORMAT THE DRIVE YOU SELECTED AND INSTALL FLUFF LINUX ON IT\e[0m"
+read -n 1 -s -r -p "Press any key to continue with the selected drive"
+echo
+echo "Attempting to format $TARGETDISK ..."
+#Marks the Disk as GPT
+sudo umount $(lsblk -nr -o MOUNTPOINT "$TARGETDISK" | grep -v '^$') 2>/dev/null
+sudo wipefs --all "$TARGETDISK"
+sudo parted --script "$TARGETDISK" mklabel gpt
+sleep 1
+#Sets up EFI Partition
+sudo parted --script "$TARGETDISK" mkpart primary fat32 1MiB 1Gib
+sudo parted --script "$TARGETDISK" set 1 esp on
+sudo parted --script "$TARGETDISK" name 1 "EFI"
+# Create the swap partition
+sudo parted --script "$TARGETDISK" mkpart primary linux-swap 1GiB 5GiB
+sudo parted --script "$TARGETDISK" name 2 "SWAP"
+
+# Create the root partition using the remaining space
+sudo parted --script "$TARGETDISK" mkpart primary ext4 5GiB 100%
+sudo parted --script "$TARGETDISK" name 3 "FluffLinux"
+
+
+BOOT_PART="${TARGETDISK}${PART_SUFFIX}1"
+SWAP_PART="${TARGETDISK}${PART_SUFFIX}2"
+ROOT_PART="${TARGETDISK}${PART_SUFFIX}3"
+
+
+sudo mkfs.fat -F32 -n "EFI" "$BOOT_PART"
+sudo mkswap -L "SWAP" "$SWAP_PART"
+sudo mkfs.ext4 -F -L "FluffLinux" "$ROOT_PART"
+echo
+echo "Attempting to mount partitions.."
+sudo mount $ROOT_PART /mnt
+sudo mount --mkdir $BOOT_PART /mnt/boot
+sudo swapon $SWAP_PART
+echo
+echo "Installing system..."
+echo
+
+sudo pacstrap -K /mnt base flufflinux-filesystem linux linux-atm linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dnsmasq dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+ memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo syslinux systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config fastfetch htop plasma konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg
+echo
+cp /etc/os-release /mnt/etc/
+cp /usr/lib/os-release /mnt/usr/lib/
+cp /etc/motd /mnt/etc/
+cp /etc/issue /mnt/etc/
+
+#Lets Avoid Flatpak for now?
+#arch-chroot /mnt /bin/bash -c "flatpak remote-add --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo"
+#arch-chroot /mnt /bin/bash -c "flatpak install --noninteractive flathub io.github.peazip.PeaZip -y"
+#arch-chroot /mnt /bin/bash -c "flatpak install --noninteractive flathub org.remmina.Remmina -y"
+#arch-chroot /mnt /bin/bash -c "flatpak override --filesystem=home com.discordapp.DiscordCanary"
+
+
+echo "Generating Fstab..."
+genfstab -U /mnt >> /mnt/etc/fstab
+echo
+
+
+echo "Configuring system..."
+echo
+read -p "Write down the hostname/pc-name you'd like to have: " HOSTNAME
+echo
+arch-chroot /mnt /bin/bash -c "echo $HOSTNAME >> /etc/hostname"
+echo
+
+mkdir /mnt/etc/skel/.local
+mkdir /mnt/etc/skel/.local/state
+mkdir /mnt/etc/skel/.local/share
+mkdir /mnt/etc/skel/.local/share/konsole
+
+
+cp /etc/skel/.local/state/dolphinstaterc /mnt/etc/skel/.local/state/
+cp /etc/skel/.local/share/konsole/* /mnt/etc/skel/.local/share/konsole/
+cp -r /etc/skel/.config/ /mnt/etc/skel/
+cp /etc/nanorc /mnt/etc/
+
+read -p "Write down the username you'd like to have: " USERNAME
+echo
+arch-chroot /mnt /bin/bash -c "
+    useradd -m -G uucp,wheel,kvm,libvirt -s /bin/zsh $USERNAME && \
+    usermod -u 1000 $USERNAME && \
+    find /home/$USERNAME -user 1000 -exec chown -h $USERNAME {} \;
+"
+
+read -p "Write down the password you'd like to have for $USERNAME : " PASSWORD
+echo
+arch-chroot /mnt /bin/bash -c "echo '$USERNAME:$PASSWORD' | chpasswd"
+echo
+arch-chroot /mnt /bin/bash -c "sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers"
+
+
+echo "Configuring BootLoader... (GRUB))"
+
+arch-chroot /mnt /bin/bash -c "grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB"
+echo
+
+GRUB_ENTRY=$(efibootmgr | grep -i "GRUB" | awk -F' ' '{print $1}' | sed 's/Boot//;s/\*//')
+echo
+efibootmgr --delete-bootnum --bootnum $GRUB_ENTRY
+
+efibootmgr --create --disk $TARGETDISK --part 1 --label "Fluff Linux" --loader /EFI/GRUB/grubx64.efi
+
+cp /etc/default/grub /mnt/etc/default/grub
+
+cp /etc/grub.d/10_linux /mnt/etc/grub.d/10_linux
+
+arch-chroot /mnt /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
+
+
+cp /etc/pacman.conf /mnt/etc/ #copies pacman
+cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
+cp /etc/locale.conf /mnt/etc/ #copies locale
+
+mkdir /mnt/etc/sddm.conf.d #sddm
+
+cp /etc/fonts/conf.d/99-emoji-fallback.conf /mnt/etc/fonts/conf.d/
+
+cp /etc/skel/.sddm.conf.d/kde_settings.conf /mnt/etc/sddm.conf.d
+
+cp -r /usr/share/sddm/themes/fluff-breeze/ /mnt/usr/share/sddm/themes/
+
+cp -r /etc/getwine /mnt/etc/
+
+cp /usr/bin/getwine /mnt/usr/bin
+
+arch-chroot /mnt /bin/bash -c "chmod +x /usr/bin/getwine"
+
+cp /etc/getwine/getwine.desktop /mnt/usr/share/applications
+
+arch-chroot /mnt /bin/bash -c "chmod +x /usr/share/applications/getwine.desktop"
+
+cp /usr/share/pixmaps/* /mnt/usr/share/pixmaps/ #flufflinux-logo
+
+ln -sf /usr/share/zoneinfo/UTC /mnt/etc/localtime
+
+arch-chroot /mnt /bin/bash -c "fc-cache -fv"
+
+arch-chroot /mnt systemctl enable sddm #enables sddm
+
+arch-chroot /mnt systemctl enable NetworkManager #Networking
+
+arch-chroot /mnt /bin/bash -c "ln -sf /run/NetworkManager/resolv.conf /etc/resolv.conf" #More Networking
+
+arch-chroot /mnt systemctl enable bluetooth #Bluetooth
+
+arch-chroot /mnt systemctl enable libvirtd
+
+arch-chroot /mnt systemctl enable tlp
+
+arch-chroot /mnt systemctl enable fstrim.timer
+
+arch-chroot /mnt systemctl enable cups
+
+arch-chroot /mnt systemctl enable avahi-daemon
+
+arch-chroot /mnt systemctl enable thermald.service
+
+#Virtmanager Permission fun
+arch-chroot /mnt /bin/bash -c "setfacl -m u:libvirt-qemu:rwx /home/$USERNAME"
+arch-chroot /mnt /bin/bash -c "flatpak override --filesystem=home org.virt_manager.virt-manager"
+
+echo
+
+cp /usr/lib/firefox/distribution/policies.json /mnt/usr/lib/firefox/distribution/ #Mouse-Wheel Scroll
+
+echo -e "\e[32mThe installation has finished! Please reboot and remove the live session media.\e[0m"
+
+
