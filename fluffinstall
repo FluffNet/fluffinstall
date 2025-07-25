@@ -1,22 +1,29 @@
 #!/bin/bash
 
 if [[ $EUID -ne 0 ]]; then
-    echo "This script must be run as root. Attempting to re-execute as root..."
+    echo "This installer must be run as root. Attempting to re-execute as root..."
     sudo su -c "bash $0 $@"
     exit 0
 fi
 
 clear #clears the screen before running the installer
 
-echo "fluffinstall 0.3 - Fluff Linux Installer"
+echo "fluffinstall 0.5 - Fluff Linux Installer"
 echo
-#echo "NOTE: CURRENTLY, THE INSTALLER REQUIRES NETWORK CONNECTION. MAKE SURE YOU'RE CONNECTED TO THE INTERNET BEFORE CONTINUING "
-echo -e "\e[31mNOTE: CURRENTLY, THE INSTALLER REQUIRES AN INTERNET CONNECTION. MAKE SURE YOU'RE CONNECTED TO THE INTERNET BEFORE CONTINUING\e[0m"
+echo -e "\e[31mNOTE: CURRENTLY THIS INSTALLER REQUIRES AN INTERNET CONNECTION. MAKE SURE YOU'RE CONNECTED TO THE INTERNET BEFORE CONTINUING\e[0m"
 echo
 echo "Press CTRL+C to exit"
 echo "Press any key to continue with the installer"
 read -n 1 -s -r -p ""
 clear
+if [ -d /sys/firmware/efi ]; then
+    BOOT_MODE="UEFI"
+else
+    BOOT_MODE="BIOS"
+fi
+echo "Detected boot mode : $BOOT_MODE"
+echo
+echo
 echo "Firstly, we want to select our target drive.."
 sleep 1
 echo
@@ -32,6 +39,7 @@ read -p "Enter the name of the target drive you want to install Fluff Linux on. 
 # Validate input (check if the device exists)
 if [[ ! -b "/dev/$TARGETDISK" ]]; then
     echo -e "\e[31mError: /dev/$TARGETDISK is not a valid block device.\e[0m"
+    read -n 1 -s -r -p ""
     exit 1
 
 fi
@@ -57,37 +65,47 @@ echo -e "\e[1;31mTHIS WILL FORMAT THE DRIVE YOU SELECTED AND INSTALL FLUFF LINUX
 read -n 1 -s -r -p "Press any key to continue with the selected drive"
 echo
 echo "Attempting to format $TARGETDISK ..."
-#Marks the Disk as GPT
+
+#Clears the drive
 sudo umount $(lsblk -nr -o MOUNTPOINT "$TARGETDISK" | grep -v '^$') 2>/dev/null
 sudo wipefs --all "$TARGETDISK"
+if [ "$BOOT_MODE" == "UEFI" ]; then
 sudo parted --script "$TARGETDISK" mklabel gpt
 sleep 1
 #Sets up EFI Partition
-sudo parted --script "$TARGETDISK" mkpart primary fat32 1MiB 1Gib
+sudo parted --script "$TARGETDISK" mkpart primary fat32 1MiB 1GiB
 sudo parted --script "$TARGETDISK" set 1 esp on
 sudo parted --script "$TARGETDISK" name 1 "EFI"
 # Create the swap partition
 sudo parted --script "$TARGETDISK" mkpart primary linux-swap 1GiB 5GiB
 sudo parted --script "$TARGETDISK" name 2 "SWAP"
-
 # Create the root partition using the remaining space
 sudo parted --script "$TARGETDISK" mkpart primary ext4 5GiB 100%
 sudo parted --script "$TARGETDISK" name 3 "FluffLinux"
-
+else
+    parted --script "$TARGETDISK" mklabel msdos
+    parted --script "$TARGETDISK" mkpart primary linux-swap 1MiB 5GiB
+    parted --script "$TARGETDISK" mkpart primary ext4 5GiB 100%
+fi
 
 BOOT_PART="${TARGETDISK}${PART_SUFFIX}1"
-SWAP_PART="${TARGETDISK}${PART_SUFFIX}2"
-ROOT_PART="${TARGETDISK}${PART_SUFFIX}3"
+if [ "$BOOT_MODE" == "UEFI" ]; then
+    SWAP_PART="${TARGETDISK}${PART_SUFFIX}2"
+    ROOT_PART="${TARGETDISK}${PART_SUFFIX}3"
+else
+    SWAP_PART="${TARGETDISK}${PART_SUFFIX}1"
+    ROOT_PART="${TARGETDISK}${PART_SUFFIX}2"
+fi
 
+if [ "$BOOT_MODE" == "UEFI" ]; then
+    mkfs.fat -F32 -n "EFI" "$BOOT_PART"
+fi
+mkswap -L "SWAP" "$SWAP_PART"
+mkfs.ext4 -F -L "FluffLinux" "$ROOT_PART"
 
-sudo mkfs.fat -F32 -n "EFI" "$BOOT_PART"
-sudo mkswap -L "SWAP" "$SWAP_PART"
-sudo mkfs.ext4 -F -L "FluffLinux" "$ROOT_PART"
-echo
-echo "Attempting to mount partitions.."
-sudo mount $ROOT_PART /mnt
-sudo mount --mkdir $BOOT_PART /mnt/boot
-sudo swapon $SWAP_PART
+mount $ROOT_PART /mnt
+[ "$BOOT_MODE" == "UEFI" ] && mount --mkdir $BOOT_PART /mnt/boot
+swapon $SWAP_PART
 echo
 echo "Installing system..."
 echo
@@ -115,7 +133,7 @@ echo "Configuring system..."
 echo
 read -p "Write down the hostname/pc-name you'd like to have: " HOSTNAME
 echo
-arch-chroot /mnt /bin/bash -c "echo $HOSTNAME >> /etc/hostname"
+arch-chroot /mnt /bin/bash -c "echo \"$HOSTNAME\" > /etc/hostname"
 echo
 
 mkdir /mnt/etc/skel/.local
@@ -146,14 +164,20 @@ arch-chroot /mnt /bin/bash -c "sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=
 
 echo "Configuring BootLoader... (GRUB))"
 
-arch-chroot /mnt /bin/bash -c "grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB"
-echo
+if [ "$BOOT_MODE" == "UEFI" ]; then
+arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --removable
+else
+arch-chroot /mnt grub-install --target=i386-pc --recheck "$TARGETDISK"
+fi
 
-GRUB_ENTRY=$(efibootmgr | grep -i "GRUB" | awk -F' ' '{print $1}' | sed 's/Boot//;s/\*//')
+#arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=FLUFFLINUX
+#if [ "$BOOT_MODE" == "UEFI" ]; then
+#GRUB_ENTRY=$(efibootmgr | grep -i "GRUB" | awk -F' ' '{print $1}' | sed 's/Boot//;s/\*//')
 echo
-efibootmgr --delete-bootnum --bootnum $GRUB_ENTRY
+#efibootmgr --delete-bootnum --bootnum $GRUB_ENTRY
 
-efibootmgr --create --disk $TARGETDISK --part 1 --label "Fluff Linux" --loader /EFI/GRUB/grubx64.efi
+#efibootmgr --create --disk $TARGETDISK --part 1 --label "Fluff Linux" --loader /EFI/GRUB/grubx64.efi
+#fi
 
 cp /etc/default/grub /mnt/etc/default/grub
 
@@ -219,5 +243,5 @@ echo
 cp /usr/lib/firefox/distribution/policies.json /mnt/usr/lib/firefox/distribution/ #Mouse-Wheel Scroll
 
 echo -e "\e[32mThe installation has finished! Please reboot and remove the live session media.\e[0m"
-
+read -n 1 -s -r -p ""
 
