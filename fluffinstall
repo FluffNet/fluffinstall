@@ -8,7 +8,7 @@ fi
 
 clear #clears the screen before running the installer
 
-echo "fluffinstall 0.6 - Fluff Linux Installer"
+echo "fluffinstall 0.6.2 - Fluff Linux Installer"
 echo
 #echo -e "\e[31mNOTE: CURRENTLY THIS INSTALLER REQUIRES AN INTERNET CONNECTION. MAKE SURE YOU'RE CONNECTED TO THE INTERNET BEFORE CONTINUING\e[0m"
 echo
@@ -166,26 +166,22 @@ arch-chroot /mnt /bin/bash -c "sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=
 echo "Configuring BootLoader... (GRUB))"
 
 if [ "$BOOT_MODE" == "UEFI" ]; then
-arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --removable
+  arch-chroot /mnt grub-install \
+    --target=x86_64-efi \
+    --efi-directory=/boot \
+    --removable \
+    --boot-directory=/boot
 else
-arch-chroot /mnt grub-install --target=i386-pc --recheck "$TARGETDISK"
+  arch-chroot /mnt grub-install \
+    --target=i386-pc \
+    --recheck "$TARGETDISK" \
+    --boot-directory=/boot
 fi
 
-#arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=FLUFFLINUX
-#if [ "$BOOT_MODE" == "UEFI" ]; then
-#GRUB_ENTRY=$(efibootmgr | grep -i "GRUB" | awk -F' ' '{print $1}' | sed 's/Boot//;s/\*//')
-echo
-#efibootmgr --delete-bootnum --bootnum $GRUB_ENTRY
-
-#efibootmgr --create --disk $TARGETDISK --part 1 --label "Fluff Linux" --loader /EFI/GRUB/grubx64.efi
-#fi
-
 cp /etc/default/grub /mnt/etc/default/grub
-
 cp /etc/grub.d/10_linux /mnt/etc/grub.d/10_linux
 
-arch-chroot /mnt /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
-
+arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 cp /etc/pacman.conf /mnt/etc/ #copies pacman
 cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist
