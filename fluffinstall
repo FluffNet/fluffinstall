@@ -10,7 +10,7 @@ clear #clears the screen before running the installer
 
 echo "fluffinstall 0.6.2 - Fluff Linux Installer"
 echo
-#echo -e "\e[31mNOTE: CURRENTLY THIS INSTALLER REQUIRES AN INTERNET CONNECTION. MAKE SURE YOU'RE CONNECTED TO THE INTERNET BEFORE CONTINUING\e[0m"
+echo -e "\e[31mNOTE: YOUR SYSTEM WILL REBOOT AUTOMATICALLY WHEN THE INSTALLER HAS FINISHED.\e[0m"
 echo
 echo "Press CTRL+C to exit"
 echo "Press any key to continue with the installer"
@@ -239,6 +239,8 @@ echo
 
 cp /usr/lib/firefox/distribution/policies.json /mnt/usr/lib/firefox/distribution/ #Mouse-Wheel Scroll
 
-echo -e "\e[32mThe installation has finished! Please reboot and remove the live session media.\e[0m"
-read -n 1 -s -r -p ""
+echo -e "\e[32mThe installation has finished! Your system will reboot automatically in 3 seconds...\e[0m"
+sleep 3
+reboot now
+
 
