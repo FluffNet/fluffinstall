@@ -1,6 +1,6 @@
-# FluffInstall
+# fluffinstall
 
-FluffInstall is the installer for Fluff Linux.
+fluffinstall is the installer for Fluff Linux.
 
 ---
 
@@ -25,7 +25,4 @@ This will compile `fluffinstall.cpp` into an executable named **`fluffinstall`**
 ## Notes
 
 - Ensure you have a C++ compiler installed (e.g., `g++`).
-- Run the compiled installer as root:
-  ```bash
-  sudo ./fluffinstall
-  ```
+- Make sure you run the installer as root
