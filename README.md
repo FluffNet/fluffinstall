@@ -24,5 +24,5 @@ This will compile `fluffinstall.cpp` into an executable named **`fluffinstall`**
 
 ## Notes
 
-- Ensure you have a C++ compiler installed (e.g., `g++`).
+- Ensure you have a C++ compiler installed (`g++`).
 - Make sure you run the installer as root
