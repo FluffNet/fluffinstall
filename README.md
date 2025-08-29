@@ -25,5 +25,5 @@ Use inside the Fluff Linux live session.
 
 ## Notes
 
-- Ensure you have a C++ compiler installed (`Preferably g++ as that is used by the build.sh script`)
+- Ensure you have a C++ compiler installed (`g++`)
 - Make sure you run the installer as root
