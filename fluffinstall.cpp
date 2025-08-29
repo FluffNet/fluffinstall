@@ -2,15 +2,31 @@
 #include <unistd.h>
 #include <filesystem>
 #include <string>
+#include <cctype>
+#include <algorithm>
+
+const std::string HOSTNAME_REQUIREMENTS = R"(Hostname Requirements:
+Allowed characters: letters (a–z and A–Z), digits (0–9), dash (-), and dot (.).
+Cannot start or end with a dash (-) or a dot (.).
+Special characters are not allowed (for example: @ and !)
+No spaces allowed.
+Max length: 255 characters.)";
+
+const std::string USERNAME_REQUIREMENTS = R"(Only lowercase letters (a–z), digits (0–9), underscore (_), or dash (-).
+No spaces allowed.
+Cannot start or end with a dash (-) or an underscore (_)
+Special characters are not allowed (for example: @ and !)
+Must start with a lowercase letter; cannot be only numbers
+Max length: 32 characters)";
 
 int main()
 {
     std::string BOOT_MODE = " ";
     std::string PART_SUFFIX = " ";
     std::string TARGETDISK = " ";
-    std::string HOSTNAME = " ";
-    std::string USERNAME = " ";
-    std::string PASSWORD = " ";
+    std::string HOSTNAME;
+    std::string USERNAME;
+    std::string PASSWORD;
     char c;
 
     if (geteuid() != 0)
@@ -28,7 +44,7 @@ int main()
     std::cout << "Continue? [Y/n]: ";
     std::cin >> c;
 
-    if (c == 'n')
+    if (c != 'y' && c != 'Y')
     {
         return 1;
     }
@@ -75,9 +91,10 @@ int main()
     std::cout << "\033[31mTHIS WILL FORMAT THE DRIVE YOU SELECTED AND INSTALL FLUFF LINUX ON IT\033[0m\n";
 
     std::cout << "Continue? [Y/n]: ";
+    c = '\0';
     std::cin >> c;
 
-    if (c == 'n')
+    if (c != 'y' && c != 'Y')
     {
         return 1;
     }
@@ -135,7 +152,7 @@ int main()
     std::system(("swapon " + SWAP_PART).c_str());
 
     std::cout << "\nInstalling system...\n";
-    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-atm linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dnsmasq dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+ memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo syslinux systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde");
+    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-atm linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dnsmasq dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+ memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo syslinux systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde");
 
     // Copy a bunch of custom files into the filesystem
     std::system("cp /etc/os-release /mnt/etc/");
@@ -159,15 +176,193 @@ int main()
 
     // Start Configuring the system (Hostname,Username,password)
     std::cout << "\nConfiguring system... \n\n";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    std::cout << "Enter the hostname/system name you'd like to have: ";
-    std::cin >> HOSTNAME;
+    bool HOSTNAMEVALID = false;
+    while (!HOSTNAMEVALID) 
+    {
+        std::cout << "Enter the hostname/system name you'd like to have\n(for example: user-pc , pc1 , fluff.pc) : ";
+        std::getline(std::cin, HOSTNAME);
 
-    std::cout << "Enter the user name you'd like to have: ";
-    std::cin >> USERNAME;
+        // length check
+        if (HOSTNAME.size() > 255)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The hostname must be less than 255 characters\n" << "\033[0m\n\n";
+            continue;
+        }
+        if(HOSTNAME.empty())
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The hostname cannot be blank, please enter a valid hostname" << "\033[0m\n\n";
+            continue;
+        }
+        
+        // check for spaces
+        bool hasSpace = false;
+        bool hasSpecialCharacterHOST = false;
+        for (char c : HOSTNAME)
+        {
+          if(!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '.')
+          {
+            hasSpecialCharacterHOST = true;
+            break;
+          }
+		  if (std::isspace(static_cast<unsigned char>(c))) 
+          {
+            hasSpace = true;
+            break;
+          }
+        }
 
-    std::cout << "Write down the password you'd like to have for " << USERNAME << ": ";
-    std::cin >> PASSWORD;
+        if(hasSpecialCharacterHOST)
+        {  
+          std::system("clear");
+          std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+          std::cout << "\033[31m" << "The hostname cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
+          continue;
+        }
+		if (hasSpace) 
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The hostname cannot have spaces\n" << "\033[0m\n";
+            continue;
+        }
+
+        // first and last char check
+        if (HOSTNAME[0] == '-' || HOSTNAME[0] == '.' || HOSTNAME[HOSTNAME.size() - 1] == '-' || HOSTNAME[HOSTNAME.size() - 1] == '.') 
+        {
+          std::system("clear");
+          std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+          std::cout << "\033[31m" << "The hostname cannot start or end with '.' or '-'\n" << "\033[0m\n";
+          continue;
+        }
+
+        HOSTNAMEVALID = true;
+    }
+
+    bool USERNAMEVALID = false;
+    while (!USERNAMEVALID) 
+    {
+        std::cout << "\nEnter the user name you'd like to have: ";
+        std::getline(std::cin, USERNAME);
+
+
+        if (USERNAME.empty())
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name cannot be empty\n" << "\033[0m\n";
+            continue;
+        }
+        // length check
+        if (USERNAME.size() > 32)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name must be less than 32 characters\n" << "\033[0m\n";
+            continue;
+        }
+
+        // first and last char check
+        if (USERNAME[0] == '-' || USERNAME[0] == '_' || USERNAME[USERNAME.size() - 1] == '-' || USERNAME[USERNAME.size() - 1] == '_')
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name cannot start or end with '_' or '-'\n" << "\033[0m\n";
+            continue;
+        }
+		
+		bool hasSpace = false;
+        bool hasNumbers = false;
+        bool hasLetters = false;
+        bool hasSpecialCharacterUSER = false;
+        for (char c : USERNAME)
+        {
+		  // check for spaces
+          if (std::isspace(static_cast<unsigned char>(c))) 
+          {
+            hasSpace = true;
+            break;
+          }
+          if(!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_')
+          {
+            hasSpecialCharacterUSER = true;
+            break;
+          }
+          //checks for numbers
+          if(std::isdigit(static_cast<unsigned char>(c)))
+          {
+            hasNumbers = true;
+          }
+          //checks for letters
+          else if(std::isalpha(static_cast<unsigned char>(c)))
+          {
+            hasLetters = true;
+          }
+        }
+		if (hasSpace) 
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "Spaces are not allowed\n" << "\033[0m\n";
+            continue;
+        }
+        if(hasSpecialCharacterUSER)
+        {  
+          std::system("clear");
+          std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+          std::cout << "\033[31m" << "The user name cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
+          continue;
+        }
+		
+        if(hasNumbers && !hasLetters)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name cannot be numbers only\n" << "\033[0m\n";
+            continue;
+        }
+  
+        if (std::any_of(USERNAME.begin(), USERNAME.end(), [](unsigned char c){ return std::isupper(c); })) 
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name contains upper letters, only lowercase letters are allowed\n" << "\033[0m\n";
+            continue;
+        }
+        
+        int isReserved = std::system(("arch-chroot /mnt id -u " + USERNAME + " > /dev/null 2>&1").c_str());
+
+        if(WEXITSTATUS(isReserved) == 0)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "This user name is reserved, please choose a different user name\n" << "\033[0m\n";
+            continue;
+        }
+
+        USERNAMEVALID = true;
+    }
+	
+    bool PASSWORDVALID = false;
+	while(!PASSWORDVALID)
+	{
+		std::cout << "Write down the password you'd like to have for " << USERNAME << ": ";
+        std::getline(std::cin, PASSWORD);
+		
+		if(PASSWORD.empty())
+		{
+			std::system("clear");
+			std::cout << "\033[31m" << "Password cannot be blank, please enter a password" << "\033[0m\n";
+			continue;
+		}
+		PASSWORDVALID = true;
+	}
+
 
     std::string archChrootCmd =
     "arch-chroot /mnt /bin/bash -c '"
