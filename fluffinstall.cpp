@@ -67,7 +67,7 @@ int main()
     std::cout << "\n\n";
 
     std::cout << "Enter the name of the target drive you want to install Fluff Linux on. For example: '/dev/sda': /dev/";
-    std::cin >> TARGETDISK;
+    std::getline(std::cin >> std::ws, TARGETDISK);
 
     if (!std::filesystem::exists("/dev/" + TARGETDISK))
     {
@@ -433,4 +433,3 @@ int main()
 
     return 0;
 }
-
