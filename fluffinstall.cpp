@@ -38,11 +38,10 @@ int main()
 
     std::system("clear");
 
-    std::cout << "fluffinstall 0.7 - Fluff Linux Installer\n";
+    std::cout << "fluffinstall 0.7.1 - Fluff Linux Installer\n";
     std::cout << "\n";
-    std::cout << "\033[33mNOTE: YOUR SYSTEM WILL REBOOT AUTOMATICALLY WHEN THE INSTALL HAS FINISHED\033[0m\n";
-    // This needs to be changed to have it explicitly only accept y or Y and -1 on anything
-    std::cout << "Continue? [Y/n]: ";
+
+    std::cout << "Continue? [y/N]: ";
     std::cin >> c;
 
     if (c != 'y' && c != 'Y')
@@ -60,7 +59,7 @@ int main()
         BOOT_MODE = "BIOS-LEGACY";
     }
 
-    std::cout << "Detected firmware boot mode: " << BOOT_MODE << "\n\n";
+    std::cout << "\nDetected firmware boot mode: " << BOOT_MODE << "\n\n";
     // tell's the user the detected firmware mode'
     std::cout << "Firstly, we want to select our target drive..\n\n\n";
 
@@ -88,10 +87,10 @@ int main()
     }
 
     std::cout << "\nYou have selected: " << TARGETDISK << "\n";
-    std::cout << "If this isn't the correct drive. Please quit the installer and restart it\n";
+    std::cout << "If this isn't the correct drive, Please quit the installer and restart it.\n";
     std::cout << "\033[31mTHIS WILL FORMAT THE DRIVE YOU SELECTED AND INSTALL FLUFF LINUX ON IT\033[0m\n";
 
-    std::cout << "Continue? [Y/n]: ";
+    std::cout << "Continue? [y/N]: ";
     c = '\0';
     std::cin >> c;
 
@@ -153,7 +152,7 @@ int main()
     std::system(("swapon " + SWAP_PART).c_str());
 
     std::cout << "\nInstalling system...\n";
-    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-atm linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dnsmasq dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+ memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo syslinux systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde");
+    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-atm linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dnsmasq dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+ memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo syslinux systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid ttf-hack");
 
     // Copy a bunch of custom files into the filesystem
     std::system("cp /etc/os-release /mnt/etc/");
@@ -427,10 +426,11 @@ int main()
     std::system(("arch-chroot /mnt setfacl -m u:libvirt-qemu:rwx /home/" + USERNAME).c_str());
     std::system("arch-chroot /mnt flatpak override --filesystem=home org.virt_manager.virt-manager");
 
+    std::system("pkill gpg-agent");
+    std::system("umount /mnt/boot");
+    std::system("umount /mnt");
 
-    std::cout << "\033[32mThe installation has finished! Your system will reboot automatically in 3 seconds...\033[0m\n";
-    std::system("sleep 3");
-    std::system("reboot now");
+    std::cout << "\033[32mThe installation has finished!\033[0m\n";
 
     return 0;
 }
