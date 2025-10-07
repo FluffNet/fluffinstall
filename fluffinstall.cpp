@@ -431,6 +431,8 @@ int main()
     std::system("umount /mnt");
 
     std::cout << "\033[32mThe installation has finished!\033[0m\n";
+    std::cout << "Press enter to exit the installer \n";
+    std::cin.get();
 
     return 0;
 }
