@@ -20,14 +20,222 @@ Special characters are not allowed (for example: @ and !)
 Must start with a lowercase letter; cannot be only numbers
 Max length: 32 characters)";
 
+std::string HOSTNAME;
+std::string USERNAME;
+std::string PASSWORD;
+
+void HOSTNAME_CHECK()
+{
+ bool HOSTNAMEVALID = false;
+    while (!HOSTNAMEVALID) 
+    {
+        std::cout << "Please enter the hostname/system name you'd like to have\n(for example: user-pc , pc1 , fluff.pc) : ";
+        std::getline(std::cin, HOSTNAME);
+
+        // length check
+        if (HOSTNAME.size() > 255)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The hostname must be less than 255 characters\n" << "\033[0m\n\n";
+            continue;
+        }
+        if(HOSTNAME.empty())
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The hostname cannot be blank, please enter a valid hostname" << "\033[0m\n\n";
+            continue;
+        }
+        
+        // check for spaces
+        bool hasSpace = false;
+        bool hasSpecialCharacterHOST = false;
+        for (char c : HOSTNAME)
+        {
+          if(!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '.')
+          {
+            hasSpecialCharacterHOST = true;
+            break;
+          }
+		  if (std::isspace(static_cast<unsigned char>(c))) 
+          {
+            hasSpace = true;
+            break;
+          }
+        }
+
+        if(hasSpecialCharacterHOST)
+        {  
+          std::system("clear");
+          std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+          std::cout << "\033[31m" << "The hostname cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
+          continue;
+        }
+		if (hasSpace) 
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The hostname cannot have spaces\n" << "\033[0m\n";
+            continue;
+        }
+
+        // first and last char check
+        if (HOSTNAME[0] == '-' || HOSTNAME[0] == '.' || HOSTNAME[HOSTNAME.size() - 1] == '-' || HOSTNAME[HOSTNAME.size() - 1] == '.') 
+        {
+          std::system("clear");
+          std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
+          std::cout << "\033[31m" << "The hostname cannot start or end with '.' or '-'\n" << "\033[0m\n";
+          continue;
+        }
+
+        HOSTNAMEVALID = true;
+    }
+}
+
+void USERNAME_CHECK()
+{
+ bool USERNAMEVALID = false;
+    while (!USERNAMEVALID) 
+    {
+        std::cout << "\nPlease enter the user name you'd like to have: ";
+        std::getline(std::cin, USERNAME);
+
+
+        if (USERNAME.empty())
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name cannot be empty\n" << "\033[0m\n";
+            continue;
+        }
+        // length check
+        if (USERNAME.size() > 32)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name must be less than 32 characters\n" << "\033[0m\n";
+            continue;
+        }
+
+        // first and last char check
+        if (USERNAME[0] == '-' || USERNAME[0] == '_' || USERNAME[USERNAME.size() - 1] == '-' || USERNAME[USERNAME.size() - 1] == '_')
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name cannot start or end with '_' or '-'\n" << "\033[0m\n";
+            continue;
+        }
+		
+		bool hasSpace = false;
+        bool hasNumbers = false;
+        bool hasLetters = false;
+        bool hasSpecialCharacterUSER = false;
+        for (char c : USERNAME)
+        {
+		  // check for spaces
+          if (std::isspace(static_cast<unsigned char>(c))) 
+          {
+            hasSpace = true;
+            break;
+          }
+          if(!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_')
+          {
+            hasSpecialCharacterUSER = true;
+            break;
+          }
+          //checks for numbers
+          if(std::isdigit(static_cast<unsigned char>(c)))
+          {
+            hasNumbers = true;
+          }
+          //checks for letters
+          else if(std::isalpha(static_cast<unsigned char>(c)))
+          {
+            hasLetters = true;
+          }
+        }
+		if (hasSpace) 
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "Spaces are not allowed\n" << "\033[0m\n";
+            continue;
+        }
+        if(hasSpecialCharacterUSER)
+        {  
+          std::system("clear");
+          std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+          std::cout << "\033[31m" << "The user name cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
+          continue;
+        }
+		
+        if(hasNumbers && !hasLetters)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name cannot be numbers only\n" << "\033[0m\n";
+            continue;
+        }
+  
+        if (std::any_of(USERNAME.begin(), USERNAME.end(), [](unsigned char c){ return std::isupper(c); })) 
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "The user name contains upper letters, only lowercase letters are allowed\n" << "\033[0m\n";
+            continue;
+        }
+        
+        int isReserved = std::system(("arch-chroot /mnt id -u " + USERNAME + " > /dev/null 2>&1").c_str());
+
+        if(WEXITSTATUS(isReserved) == 0)
+        {
+            std::system("clear");
+            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
+            std::cout << "\033[31m" << "This user name is reserved, please choose a different user name\n" << "\033[0m\n";
+            continue;
+        }
+
+        USERNAMEVALID = true;
+    }
+}
+
+void PASSWORD_CHECK()
+{
+    bool PASSWORDVALID = false;
+    std::string PASSWORD_RECHECK; 
+    
+    while(!PASSWORDVALID)
+	{
+		std::cout << "\nPlease enter a password: ";
+        std::getline(std::cin, PASSWORD);
+		
+		if(PASSWORD.empty())
+		{
+			std::system("clear");
+			std::cout << "\033[31m" << "The password cannot be blank. " << "\033[0m\n";
+			continue;
+		}
+	    std::cout << "\nRe-enter your password to confirm: ";
+        std::getline(std::cin, PASSWORD_RECHECK);
+        if (PASSWORD != PASSWORD_RECHECK)
+        {
+            std::system("clear");
+            std::cout << "\033[31m" << "Passwords do not match. Please try again." << "\033[0m\n\n";
+            continue;
+        }
+        PASSWORDVALID = true;
+	}
+}
+
 int main()
 {
     std::string BOOT_MODE = " ";
     std::string PART_SUFFIX = " ";
     std::string TARGETDISK = " ";
-    std::string HOSTNAME;
-    std::string USERNAME;
-    std::string PASSWORD;
+    //std::string HOSTNAME;
+    //std::string USERNAME;
+    //std::string PASSWORD;
     char c;
 
     if (geteuid() != 0)
@@ -38,7 +246,7 @@ int main()
 
     std::system("clear");
 
-    std::cout << "fluffinstall 0.7.2 - Fluff Linux Installer\n\n";
+    std::cout << "fluffinstall 0.7.3 - Fluff Linux Installer\n\n";
     std::cout << "Welcome to the Fluff Linux Installer.\nThis installer will guide you through the process of installing Fluff Linux on a device of your choice.\n";
     std::cout << "\n";
 
@@ -179,191 +387,9 @@ int main()
     std::cout << "\nConfiguring system... \n\n";
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    bool HOSTNAMEVALID = false;
-    while (!HOSTNAMEVALID) 
-    {
-        std::cout << "Enter the hostname/system name you'd like to have\n(for example: user-pc , pc1 , fluff.pc) : ";
-        std::getline(std::cin, HOSTNAME);
-
-        // length check
-        if (HOSTNAME.size() > 255)
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The hostname must be less than 255 characters\n" << "\033[0m\n\n";
-            continue;
-        }
-        if(HOSTNAME.empty())
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The hostname cannot be blank, please enter a valid hostname" << "\033[0m\n\n";
-            continue;
-        }
-        
-        // check for spaces
-        bool hasSpace = false;
-        bool hasSpecialCharacterHOST = false;
-        for (char c : HOSTNAME)
-        {
-          if(!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '.')
-          {
-            hasSpecialCharacterHOST = true;
-            break;
-          }
-		  if (std::isspace(static_cast<unsigned char>(c))) 
-          {
-            hasSpace = true;
-            break;
-          }
-        }
-
-        if(hasSpecialCharacterHOST)
-        {  
-          std::system("clear");
-          std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
-          std::cout << "\033[31m" << "The hostname cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
-          continue;
-        }
-		if (hasSpace) 
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The hostname cannot have spaces\n" << "\033[0m\n";
-            continue;
-        }
-
-        // first and last char check
-        if (HOSTNAME[0] == '-' || HOSTNAME[0] == '.' || HOSTNAME[HOSTNAME.size() - 1] == '-' || HOSTNAME[HOSTNAME.size() - 1] == '.') 
-        {
-          std::system("clear");
-          std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
-          std::cout << "\033[31m" << "The hostname cannot start or end with '.' or '-'\n" << "\033[0m\n";
-          continue;
-        }
-
-        HOSTNAMEVALID = true;
-    }
-
-    bool USERNAMEVALID = false;
-    while (!USERNAMEVALID) 
-    {
-        std::cout << "\nEnter the user name you'd like to have: ";
-        std::getline(std::cin, USERNAME);
-
-
-        if (USERNAME.empty())
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The user name cannot be empty\n" << "\033[0m\n";
-            continue;
-        }
-        // length check
-        if (USERNAME.size() > 32)
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The user name must be less than 32 characters\n" << "\033[0m\n";
-            continue;
-        }
-
-        // first and last char check
-        if (USERNAME[0] == '-' || USERNAME[0] == '_' || USERNAME[USERNAME.size() - 1] == '-' || USERNAME[USERNAME.size() - 1] == '_')
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The user name cannot start or end with '_' or '-'\n" << "\033[0m\n";
-            continue;
-        }
-		
-		bool hasSpace = false;
-        bool hasNumbers = false;
-        bool hasLetters = false;
-        bool hasSpecialCharacterUSER = false;
-        for (char c : USERNAME)
-        {
-		  // check for spaces
-          if (std::isspace(static_cast<unsigned char>(c))) 
-          {
-            hasSpace = true;
-            break;
-          }
-          if(!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_')
-          {
-            hasSpecialCharacterUSER = true;
-            break;
-          }
-          //checks for numbers
-          if(std::isdigit(static_cast<unsigned char>(c)))
-          {
-            hasNumbers = true;
-          }
-          //checks for letters
-          else if(std::isalpha(static_cast<unsigned char>(c)))
-          {
-            hasLetters = true;
-          }
-        }
-		if (hasSpace) 
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "Spaces are not allowed\n" << "\033[0m\n";
-            continue;
-        }
-        if(hasSpecialCharacterUSER)
-        {  
-          std::system("clear");
-          std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-          std::cout << "\033[31m" << "The user name cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
-          continue;
-        }
-		
-        if(hasNumbers && !hasLetters)
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The user name cannot be numbers only\n" << "\033[0m\n";
-            continue;
-        }
-  
-        if (std::any_of(USERNAME.begin(), USERNAME.end(), [](unsigned char c){ return std::isupper(c); })) 
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "The user name contains upper letters, only lowercase letters are allowed\n" << "\033[0m\n";
-            continue;
-        }
-        
-        int isReserved = std::system(("arch-chroot /mnt id -u " + USERNAME + " > /dev/null 2>&1").c_str());
-
-        if(WEXITSTATUS(isReserved) == 0)
-        {
-            std::system("clear");
-            std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
-            std::cout << "\033[31m" << "This user name is reserved, please choose a different user name\n" << "\033[0m\n";
-            continue;
-        }
-
-        USERNAMEVALID = true;
-    }
-	
-    bool PASSWORDVALID = false;
-	while(!PASSWORDVALID)
-	{
-		std::cout << "Write down the password you'd like to have for " << USERNAME << ": ";
-        std::getline(std::cin, PASSWORD);
-		
-		if(PASSWORD.empty())
-		{
-			std::system("clear");
-			std::cout << "\033[31m" << "Password cannot be blank, please enter a password" << "\033[0m\n";
-			continue;
-		}
-		PASSWORDVALID = true;
-	}
-
+	HOSTNAME_CHECK();
+    USERNAME_CHECK();
+    PASSWORD_CHECK();
 
     std::string archChrootCmd =
     "arch-chroot /mnt /bin/bash -c '"
@@ -375,7 +401,7 @@ int main()
 
     std::system(archChrootCmd.c_str());
 
-    std::cout << "Configuring BootLoader (GRUB) ... \n";
+    std::cout << "\nConfiguring BootLoader (GRUB) ... \n";
     if (BOOT_MODE == "UEFI")
     {
         std::system("arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --removable --boot-directory=/boot");
@@ -434,7 +460,7 @@ int main()
     std::system("umount /mnt");
 
     std::cout << "\033[32mThe installation has finished!\033[0m\n";
-    std::cout << "Press enter to exit the installer \n";
+    std::cout << "Press Enter to exit the installer.. \n";
     std::cin.get();
 
     return 0;
