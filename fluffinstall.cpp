@@ -5,7 +5,6 @@
 #include <string>
 #include <cctype>
 #include <algorithm>
-
 const std::string HOSTNAME_REQUIREMENTS = R"(Hostname Requirements:
 Allowed characters: letters (a–z and A–Z), digits (0–9), dash (-), and dot (.).
 Cannot start or end with a dash (-) or a dot (.).
@@ -24,9 +23,12 @@ std::string HOSTNAME;
 std::string USERNAME;
 std::string PASSWORD;
 
+std::string confirmation; 
 void HOSTNAME_CHECK()
 {
- bool HOSTNAMEVALID = false;
+  confirmation = ' ';
+  
+	bool HOSTNAMEVALID = false;
     while (!HOSTNAMEVALID) 
     {
         std::cout << "Please enter the hostname/system name you'd like to have\n(for example: user-pc , pc1 , fluff.pc) : ";
@@ -89,14 +91,24 @@ void HOSTNAME_CHECK()
           continue;
         }
 
+        std::cout << "\nSet \"" << HOSTNAME << "\" as the hostname? [Y/n]: ";
+        std::getline(std::cin, confirmation);
+        if(confirmation == "n" || confirmation == "N")
+        {
+          std::cout << std::endl; 
+          continue;
+        }
+
         HOSTNAMEVALID = true;
     }
 }
 
 void USERNAME_CHECK()
 {
- bool USERNAMEVALID = false;
-    while (!USERNAMEVALID) 
+	confirmation = ' ';
+  
+	bool USERNAMEVALID = false;
+    while (!USERNAMEVALID)
     {
         std::cout << "\nPlease enter the user name you'd like to have: ";
         std::getline(std::cin, USERNAME);
@@ -195,6 +207,14 @@ void USERNAME_CHECK()
             std::cout << "\033[31m" << "This user name is reserved, please choose a different user name\n" << "\033[0m\n";
             continue;
         }
+        
+        std::cout << "\nSet \"" << USERNAME << "\" as the username? [Y/n]: ";
+        std::getline(std::cin, confirmation);
+        if(confirmation == "n" || confirmation == "N")
+        {
+          std::cout << std::endl; 
+          continue;
+        }
 
         USERNAMEVALID = true;
     }
@@ -233,9 +253,6 @@ int main()
     std::string BOOT_MODE = " ";
     std::string PART_SUFFIX = " ";
     std::string TARGETDISK = " ";
-    //std::string HOSTNAME;
-    //std::string USERNAME;
-    //std::string PASSWORD;
     char c;
 
     if (geteuid() != 0)
@@ -246,7 +263,7 @@ int main()
 
     std::system("clear");
 
-    std::cout << "fluffinstall 0.7.3 - Fluff Linux Installer\n\n";
+    std::cout << "fluffinstall 0.8 - Fluff Linux Installer\n\n";
     std::cout << "Welcome to the Fluff Linux Installer.\nThis installer will guide you through the process of installing Fluff Linux on a device of your choice.\n";
     std::cout << "\n";
 
@@ -368,6 +385,8 @@ int main()
     std::system("cp /usr/lib/os-release /mnt/usr/lib/");
     std::system("cp /etc/motd /mnt/etc/");
     std::system("cp /etc/issue /mnt/etc/");
+    std::system("mkdir -p /mnt/etc/fastfetch"); //fastfetch logo
+    std::system("cp /etc/fastfetch/config.jsonc /mnt/etc/fastfetch");
 
     std::system("mkdir /mnt/etc/skel/.local");
     std::system("mkdir /mnt/etc/skel/.local/state");
