@@ -455,6 +455,13 @@ int main()
     std::system("cp /etc/getwine/getwine.desktop /mnt/usr/share/applications");
     std::system("arch-chroot /mnt chmod +x /usr/share/applications/getwine.desktop");
 
+    // fluff-packagehelper stuff
+    std::system("cp /usr/bin/fluff-packagehelper /mnt/usr/bin");
+    std::system("cp /usr/share/applications/fluff-packagehelper.desktop /mnt/usr/share/applications");
+    std::system("arch-chroot /mnt chmod +x /usr/bin/fluff-packagehelper");
+    std::system("arch-chroot /mnt chmod +x /usr/share/applications/fluff-packagehelper.desktop");
+
+
 
     //enable system services
     std::system("arch-chroot /mnt systemctl enable sddm");
