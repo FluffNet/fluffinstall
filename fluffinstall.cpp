@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //                  FluffInstall | ©FluffNet 2026
 //-----------------------------------------------------------------------------
-//                  Release 0.8.1; (2026-02-24)
+//                  Release 0.8.1; (2026-02-27)
 //
 //  - Standardized comment formats, no leading space.
 //  - Proper input validation in main().
@@ -62,11 +62,8 @@ std::string y_N_input() {
             std::cout << "Continue? [y/N]: ";
             std::getline(std::cin, USR_INPUT);
             
-            std::cout << USR_INPUT << std::endl;
-            
             if (USR_INPUT.length() == 0) 
             {
-                std::cout << "User said no with enter" << std::endl;
                 input_correct = true;
                 USR_INPUT = "n";
             }
@@ -79,13 +76,11 @@ std::string y_N_input() {
         
             if (USR_INPUT == "y" || USR_INPUT == "Y") 
             {
-                std::cout << "YAY IT WORKED" << std::endl;
                 USR_INPUT = "y";
                 input_correct = true;
             } 
             else if (USR_INPUT == "n" || USR_INPUT == "N")
             {
-                std::cout << "User said no" << std::endl;
                 USR_INPUT = "n";
                 input_correct = true;
             }
