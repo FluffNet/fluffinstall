@@ -5,9 +5,9 @@
 //                  Release 0.8.1; (2026-02-24)
 //
 //  - Standardized comment formats, no leading space.
-//  - Proper input validation everwhere.
+//  - Proper input validation in main().
 //  - Removed clearing terminal for sake of debugging.
-//  - Cleaned up junk logic.
+//  - Cleaned some junk logic.
 //  
 //-----------------------------------------------------------------------------
 //                  How does this program function? 
@@ -18,7 +18,8 @@
 //-----------------------------------------------------------------------------
 //                  TODO/"Improvment" list
 //
-//  1. Shrink main() into more sub functions -Toast 2026-02-24
+//  This code base is going to be killed soon, so don't work on this unless
+//  you want to waste your time. Maintenance only. -Toast 2026-02-27
 //
 //-----------------------------------------------------------------------------
 #include <iostream>
@@ -42,11 +43,58 @@ Special characters are not allowed (for example: @ and !)
 Must start with a lowercase letter; cannot be only numbers
 Max length: 32 characters)";
 
+const std::string VERSION = "0.8.1";
+
 std::string HOSTNAME;
 std::string USERNAME;
 std::string PASSWORD;
 
-std::string confirmation; 
+std::string confirmation;
+
+std::string y_N_input() {
+    //This function takes user inputs and returns "y" or "n"
+    //Could this be implemented better? Yes. But this works for now. -Toast 2026-02-27
+
+    std::string USR_INPUT = "";
+    bool input_correct = false;
+
+        while (!input_correct) {
+            std::cout << "Continue? [y/N]: ";
+            std::getline(std::cin, USR_INPUT);
+            
+            std::cout << USR_INPUT << std::endl;
+            
+            if (USR_INPUT.length() == 0) 
+            {
+                std::cout << "User said no with enter" << std::endl;
+                input_correct = true;
+                USR_INPUT = "n";
+            }
+        
+            if (USR_INPUT != "y" && USR_INPUT != "Y" && USR_INPUT != "n" && USR_INPUT != "N")
+            {
+                input_correct = false;
+                continue;
+            }
+        
+            if (USR_INPUT == "y" || USR_INPUT == "Y") 
+            {
+                std::cout << "YAY IT WORKED" << std::endl;
+                USR_INPUT = "y";
+                input_correct = true;
+            } 
+            else if (USR_INPUT == "n" || USR_INPUT == "N")
+            {
+                std::cout << "User said no" << std::endl;
+                USR_INPUT = "n";
+                input_correct = true;
+            }
+
+        }
+
+    return USR_INPUT;
+}
+
 void HOSTNAME_CHECK()
 {
   confirmation = ' ';
@@ -176,7 +224,7 @@ void USERNAME_CHECK()
         bool hasSpecialCharacterUSER = false;
         for (char c : USERNAME)
         {
-		  // check for spaces
+		  //check for spaces
           if (std::isspace(static_cast<unsigned char>(c))) 
           {
             hasSpace = true;
@@ -291,7 +339,6 @@ int main()
     std::string BOOT_MODE = " ";
     std::string PART_SUFFIX = " ";
     std::string TARGETDISK = " ";
-    char c;
 
     if (geteuid() != 0)
     {
@@ -301,13 +348,12 @@ int main()
 
     std::system("clear");
 
-    std::cout << "fluffinstall 0.8.1 - Fluff Linux Installer\n\n";
+    std::cout << "FluffInstall " << VERSION << " - Fluff Linux Installer\n\n";
     std::cout << "Welcome to the Fluff Linux Installer.\nThis installer will guide you through the process of installing Fluff Linux on a device of your choice.\n\n";
 
-    std::cout << "Continue? [y/N]: ";
-    std::cin >> c;
+    std::string USER_CHOICE = y_N_input(); //user gets "Continue? [y/N]: " on screen.
 
-    if (c != 'y' && c != 'Y')
+    if (USER_CHOICE == "n") 
     {
         return 1;
     }
@@ -353,15 +399,12 @@ int main()
     std::cout << "If this isn't the correct drive, Please quit the installer and restart it.\n";
     std::cout << "\033[31mTHIS WILL FORMAT THE DRIVE YOU SELECTED AND INSTALL FLUFF LINUX ON IT\033[0m\n";
 
-    std::cout << "Continue? [y/N]: ";
-    c = '\0';
-    std::cin >> c;
+    std::string USER_CHOICE = y_N_input(); //user gets "Continue? [y/N]: " on screen.
 
-    if (c != 'y' && c != 'Y')
+    if (USER_CHOICE == "n") 
     {
         return 1;
     }
-
 
     std::cout << "\nAttempting to format " << TARGETDISK << "\n";
 
@@ -415,7 +458,7 @@ int main()
     std::system(("swapon " + SWAP_PART).c_str());
 
     std::cout << "\nInstalling system...\n";
-    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter dnsmasq bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia-open nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid nvim ttf-hack rust");
+    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter dnsmasq bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia-open nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid nvim ttf-hack rust pacman-contrib");
 
     //Copy a bunch of custom files into the filesystem
     std::system("cp /etc/os-release /mnt/etc/");
@@ -425,14 +468,7 @@ int main()
     std::system("mkdir -p /mnt/etc/fastfetch"); //fastfetch logo
     std::system("cp /etc/fastfetch/config.jsonc /mnt/etc/fastfetch");
 
-    std::system("mkdir /mnt/etc/skel/.local");
-    std::system("mkdir /mnt/etc/skel/.local/state");
-    std::system("mkdir /mnt/etc/skel/.local/share");
-    std::system("mkdir /mnt/etc/skel/.local/share/konsole");
-
-    std::system("cp /etc/skel/.local/state/dolphinstaterc /mnt/etc/skel/.local/state/");
-    std::system("cp /etc/skel/.local/share/konsole/* /mnt/etc/skel/.local/share/konsole/");
-    std::system("cp -r /etc/skel/.config/ /mnt/etc/skel/");
+    std::system("cp -r /etc/skel /mnt/etc/");
     std::system("cp /etc/nanorc /mnt/etc/");
 
     //Generate Fstab file
@@ -473,12 +509,13 @@ int main()
     //bootloader setup finished.
 
     //copy more system files here:
+    std::system(("chown root:root /mnt/home/" + USERNAME + "/Desktop/trash:⁄.desktop").c_str());
     std::system("cp /etc/pacman.conf /mnt/etc/");
     std::system("cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist");
     std::system("cp /etc/locale.conf /mnt/etc/");
     std::system("mkdir /mnt/etc/sddm.conf.d");
     std::system("cp /etc/fonts/conf.d/99-emoji-fallback.conf /mnt/etc/fonts/conf.d/");
-    std::system("cp /etc/skel/.sddm.conf.d/kde_settings.conf /mnt/etc/sddm.conf.d");
+    std::system("cp /mnt/etc/skel/.sddm.conf.d/kde_settings.conf /mnt/etc/sddm.conf.d");
     std::system("cp -r /usr/share/sddm/themes/fluff-breeze/ /mnt/usr/share/sddm/themes/");
     std::system("cp /usr/share/pixmaps/* /mnt/usr/share/pixmaps/");
     std::system("ln -sf /usr/share/zoneinfo/UTC /mnt/etc/localtime"); //keep this until timezone selection is implemented
