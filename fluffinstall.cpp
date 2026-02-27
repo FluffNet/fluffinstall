@@ -1,29 +1,100 @@
-// SPECIAL THANKS TO SPACE COWBOY FOR PORTING FLUFFINSTALL TO C++
+//      SPECIAL THANKS TO SPACE COWBOY FOR PORTING FLUFFINSTALL TO C++
+//-----------------------------------------------------------------------------
+//                  FluffInstall | ©FluffNet 2026
+//-----------------------------------------------------------------------------
+//                  Release 0.8.1; (2026-02-24)
+//
+//  - Standardized comment formats, no leading space.
+//  - Proper input validation in main().
+//  - Removed clearing terminal for sake of debugging.
+//  - Cleaned some junk logic.
+//  
+//-----------------------------------------------------------------------------
+//                  How does this program function? 
+//
+//  DITTO
+//  
+//
+//-----------------------------------------------------------------------------
+//                  TODO/"Improvment" list
+//
+//  This code base is going to be killed soon, so don't work on this unless
+//  you want to waste your time. Maintenance only. -Toast 2026-02-27
+//
+//-----------------------------------------------------------------------------
 #include <iostream>
 #include <unistd.h>
 #include <filesystem>
 #include <string>
 #include <cctype>
 #include <algorithm>
+
 const std::string HOSTNAME_REQUIREMENTS = R"(Hostname Requirements:
-Allowed characters: letters (a–z and A–Z), digits (0–9), dash (-), and dot (.).
+Allowed characters: letters (a-z and A-Z), digits (0-9), dash (-), and dot (.).
 Cannot start or end with a dash (-) or a dot (.).
 Special characters are not allowed (for example: @ and !)
 No spaces allowed.
 Max length: 255 characters.)";
 
-const std::string USERNAME_REQUIREMENTS = R"(Only lowercase letters (a–z), digits (0–9), underscore (_), or dash (-).
+const std::string USERNAME_REQUIREMENTS = R"(Only lowercase letters (a-z), digits (0-9), underscore (_), or dash (-).
 No spaces allowed.
 Cannot start or end with a dash (-) or an underscore (_)
 Special characters are not allowed (for example: @ and !)
 Must start with a lowercase letter; cannot be only numbers
 Max length: 32 characters)";
 
+const std::string VERSION = "0.8.1";
+
 std::string HOSTNAME;
 std::string USERNAME;
 std::string PASSWORD;
 
-std::string confirmation; 
+std::string confirmation;
+
+std::string y_N_input() {
+    //This function takes user inputs and returns "y" or "n"
+    //Could this be implemented better? Yes. But this works for now. -Toast 2026-02-27
+
+    std::string USR_INPUT = "";
+    bool input_correct = false;
+
+        while (!input_correct) {
+            std::cout << "Continue? [y/N]: ";
+            std::getline(std::cin, USR_INPUT);
+            
+            std::cout << USR_INPUT << std::endl;
+            
+            if (USR_INPUT.length() == 0) 
+            {
+                std::cout << "User said no with enter" << std::endl;
+                input_correct = true;
+                USR_INPUT = "n";
+            }
+        
+            if (USR_INPUT != "y" && USR_INPUT != "Y" && USR_INPUT != "n" && USR_INPUT != "N")
+            {
+                input_correct = false;
+                continue;
+            }
+        
+            if (USR_INPUT == "y" || USR_INPUT == "Y") 
+            {
+                std::cout << "YAY IT WORKED" << std::endl;
+                USR_INPUT = "y";
+                input_correct = true;
+            } 
+            else if (USR_INPUT == "n" || USR_INPUT == "N")
+            {
+                std::cout << "User said no" << std::endl;
+                USR_INPUT = "n";
+                input_correct = true;
+            }
+
+        }
+
+    return USR_INPUT;
+}
+
 void HOSTNAME_CHECK()
 {
   confirmation = ' ';
@@ -34,23 +105,25 @@ void HOSTNAME_CHECK()
         std::cout << "Please enter the hostname/system name you'd like to have\n(for example: user-pc , pc1 , fluff.pc) : ";
         std::getline(std::cin, HOSTNAME);
 
-        // length check
+        //length check
         if (HOSTNAME.size() > 255)
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The hostname must be less than 255 characters\n" << "\033[0m\n\n";
             continue;
         }
         if(HOSTNAME.empty())
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The hostname cannot be blank, please enter a valid hostname" << "\033[0m\n\n";
             continue;
         }
         
-        // check for spaces
+        //check for spaces
         bool hasSpace = false;
         bool hasSpecialCharacterHOST = false;
         for (char c : HOSTNAME)
@@ -69,23 +142,26 @@ void HOSTNAME_CHECK()
 
         if(hasSpecialCharacterHOST)
         {  
-          std::system("clear");
+          //std::system("clear");
+          std::cout << "\n\n\n";
           std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
           std::cout << "\033[31m" << "The hostname cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
           continue;
         }
 		if (hasSpace) 
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The hostname cannot have spaces\n" << "\033[0m\n";
             continue;
         }
 
-        // first and last char check
+        //first and last char check
         if (HOSTNAME[0] == '-' || HOSTNAME[0] == '.' || HOSTNAME[HOSTNAME.size() - 1] == '-' || HOSTNAME[HOSTNAME.size() - 1] == '.') 
         {
-          std::system("clear");
+          //std::system("clear");
+          std::cout << "\n\n\n";
           std::cout << "\033[35m" << HOSTNAME_REQUIREMENTS << "\033[0m\n\n";
           std::cout << "\033[31m" << "The hostname cannot start or end with '.' or '-'\n" << "\033[0m\n";
           continue;
@@ -116,24 +192,27 @@ void USERNAME_CHECK()
 
         if (USERNAME.empty())
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The user name cannot be empty\n" << "\033[0m\n";
             continue;
         }
-        // length check
+        //length check
         if (USERNAME.size() > 32)
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The user name must be less than 32 characters\n" << "\033[0m\n";
             continue;
         }
 
-        // first and last char check
+        //first and last char check
         if (USERNAME[0] == '-' || USERNAME[0] == '_' || USERNAME[USERNAME.size() - 1] == '-' || USERNAME[USERNAME.size() - 1] == '_')
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The user name cannot start or end with '_' or '-'\n" << "\033[0m\n";
             continue;
@@ -145,7 +224,7 @@ void USERNAME_CHECK()
         bool hasSpecialCharacterUSER = false;
         for (char c : USERNAME)
         {
-		  // check for spaces
+		  //check for spaces
           if (std::isspace(static_cast<unsigned char>(c))) 
           {
             hasSpace = true;
@@ -169,14 +248,16 @@ void USERNAME_CHECK()
         }
 		if (hasSpace) 
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "Spaces are not allowed\n" << "\033[0m\n";
             continue;
         }
         if(hasSpecialCharacterUSER)
         {  
-          std::system("clear");
+          //std::system("clear");
+          std::cout << "\n\n\n";
           std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
           std::cout << "\033[31m" << "The user name cannot have any special characters (Check requirements and try again)\n" << "\033[0m\n";
           continue;
@@ -184,7 +265,8 @@ void USERNAME_CHECK()
 		
         if(hasNumbers && !hasLetters)
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The user name cannot be numbers only\n" << "\033[0m\n";
             continue;
@@ -192,7 +274,8 @@ void USERNAME_CHECK()
   
         if (std::any_of(USERNAME.begin(), USERNAME.end(), [](unsigned char c){ return std::isupper(c); })) 
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "The user name contains upper letters, only lowercase letters are allowed\n" << "\033[0m\n";
             continue;
@@ -202,7 +285,8 @@ void USERNAME_CHECK()
 
         if(WEXITSTATUS(isReserved) == 0)
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[35m" << USERNAME_REQUIREMENTS << "\033[0m\n\n";
             std::cout << "\033[31m" << "This user name is reserved, please choose a different user name\n" << "\033[0m\n";
             continue;
@@ -232,7 +316,8 @@ void PASSWORD_CHECK()
 		
 		if(PASSWORD.empty())
 		{
-			std::system("clear");
+			//std::system("clear");
+            std::cout << "\n\n\n";
 			std::cout << "\033[31m" << "The password cannot be blank. " << "\033[0m\n";
 			continue;
 		}
@@ -240,7 +325,8 @@ void PASSWORD_CHECK()
         std::getline(std::cin, PASSWORD_RECHECK);
         if (PASSWORD != PASSWORD_RECHECK)
         {
-            std::system("clear");
+            //std::system("clear");
+            std::cout << "\n\n\n";
             std::cout << "\033[31m" << "Passwords do not match. Please try again." << "\033[0m\n\n";
             continue;
         }
@@ -253,7 +339,6 @@ int main()
     std::string BOOT_MODE = " ";
     std::string PART_SUFFIX = " ";
     std::string TARGETDISK = " ";
-    char c;
 
     if (geteuid() != 0)
     {
@@ -263,19 +348,17 @@ int main()
 
     std::system("clear");
 
-    std::cout << "fluffinstall 0.8 - Fluff Linux Installer\n\n";
-    std::cout << "Welcome to the Fluff Linux Installer.\nThis installer will guide you through the process of installing Fluff Linux on a device of your choice.\n";
-    std::cout << "\n";
+    std::cout << "FluffInstall " << VERSION << " - Fluff Linux Installer\n\n";
+    std::cout << "Welcome to the Fluff Linux Installer.\nThis installer will guide you through the process of installing Fluff Linux on a device of your choice.\n\n";
 
-    std::cout << "Continue? [y/N]: ";
-    std::cin >> c;
+    std::string USER_CHOICE = y_N_input(); //user gets "Continue? [y/N]: " on screen.
 
-    if (c != 'y' && c != 'Y')
+    if (USER_CHOICE == "n") 
     {
         return 1;
     }
 
-    // Check if the system's firmware is UEFI or LEGACY
+    //Check if the system's firmware is UEFI or LEGACY
     if (std::filesystem::exists("/sys/firmware/efi") && std::filesystem::is_directory("/sys/firmware/efi"))
     {
         BOOT_MODE = "UEFI";
@@ -286,7 +369,7 @@ int main()
     }
 
     std::cout << "\nDetected firmware boot mode: " << BOOT_MODE << "\n\n";
-    // tell's the user the detected firmware mode'
+    //tell's the user the detected firmware mode'
     std::cout << "Firstly, we want to select our target drive..\n\n\n";
 
     std::system("lsblk -d --output NAME,MODEL,SIZE,TYPE --noheadings | grep 'disk$'");
@@ -316,15 +399,12 @@ int main()
     std::cout << "If this isn't the correct drive, Please quit the installer and restart it.\n";
     std::cout << "\033[31mTHIS WILL FORMAT THE DRIVE YOU SELECTED AND INSTALL FLUFF LINUX ON IT\033[0m\n";
 
-    std::cout << "Continue? [y/N]: ";
-    c = '\0';
-    std::cin >> c;
+    std::string USER_CHOICE = y_N_input(); //user gets "Continue? [y/N]: " on screen.
 
-    if (c != 'y' && c != 'Y')
+    if (USER_CHOICE == "n") 
     {
         return 1;
     }
-
 
     std::cout << "\nAttempting to format " << TARGETDISK << "\n";
 
@@ -380,7 +460,7 @@ int main()
     std::cout << "\nInstalling system...\n";
     std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter dnsmasq bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia-open nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid nvim ttf-hack rust pacman-contrib");
 
-    // Copy a bunch of custom files into the filesystem
+    //Copy a bunch of custom files into the filesystem
     std::system("cp /etc/os-release /mnt/etc/");
     std::system("cp /usr/lib/os-release /mnt/usr/lib/");
     std::system("cp /etc/motd /mnt/etc/");
@@ -388,15 +468,14 @@ int main()
     std::system("mkdir -p /mnt/etc/fastfetch"); //fastfetch logo
     std::system("cp /etc/fastfetch/config.jsonc /mnt/etc/fastfetch");
 
-
     std::system("cp -r /etc/skel /mnt/etc/");
     std::system("cp /etc/nanorc /mnt/etc/");
 
-    // Generate Fstab file
+    //Generate Fstab file
     std::cout << "Generating Fstab... \n";
     std::system("genfstab -U /mnt >> /mnt/etc/fstab");
 
-    // Start Configuring the system (Hostname,Username,password)
+    //Start Configuring the system (Hostname,Username,password)
     std::cout << "\nConfiguring system... \n\n";
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
@@ -427,9 +506,9 @@ int main()
     std::system("cp /etc/grub.d/10_linux /mnt/etc/grub.d/10_linux");
     std::system("arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg");
 
-    // bootloader setup finished.
+    //bootloader setup finished.
 
-    // copy more system files here:
+    //copy more system files here:
     std::system(("chown root:root /mnt/home/" + USERNAME + "/Desktop/trash:⁄.desktop").c_str());
     std::system("cp /etc/pacman.conf /mnt/etc/");
     std::system("cp /etc/pacman.d/mirrorlist /mnt/etc/pacman.d/mirrorlist");
@@ -443,14 +522,14 @@ int main()
     std::system("arch-chroot /mnt fc-cache -fv");
     std::system("cp /usr/lib/firefox/distribution/policies.json /mnt/usr/lib/firefox/distribution/"); //middle mouse scroll
 
-    // getwine stuff
+    //getwine stuff
     std::system("cp -r /etc/getwine /mnt/etc/");
     std::system("cp /usr/bin/getwine /mnt/usr/bin");
     std::system("arch-chroot /mnt chmod +x /usr/bin/getwine");
     std::system("cp /etc/getwine/getwine.desktop /mnt/usr/share/applications");
     std::system("arch-chroot /mnt chmod +x /usr/share/applications/getwine.desktop");
 
-    // fluff-packagehelper stuff
+    //fluff-packagehelper stuff
     std::system("cp /usr/bin/fluff-packagehelper /mnt/usr/bin");
     std::system("cp /usr/share/applications/fluff-packagehelper.desktop /mnt/usr/share/applications");
     std::system("arch-chroot /mnt chmod +x /usr/bin/fluff-packagehelper");
@@ -480,16 +559,18 @@ int main()
     std::system("arch-chroot /mnt systemctl enable avahi-daemon");
     std::system("arch-chroot /mnt systemctl enable thermald.service");
 
-    // virtmanager flatpak perms/OOBE
+    //virtmanager flatpak perms/OOBE
     std::system(("arch-chroot /mnt setfacl -m u:libvirt-qemu:rwx /home/" + USERNAME).c_str());
     std::system("arch-chroot /mnt flatpak override --filesystem=home org.virt_manager.virt-manager");
 
     std::system("pkill gpg-agent");
     std::system("umount /mnt/boot");
     std::system("umount /mnt");
-
+    
+    std::cout << "\n\n\n";
     std::cout << "\033[32mThe installation has finished!\033[0m\n";
-    std::cout << "Press Enter to exit the installer.. \n";
+    std::count << "Fluff linux is now bootable on the target drive.\n";
+    std::cout << "Press Enter to exit the installer... \n";
     std::cin.get();
 
     return 0;
