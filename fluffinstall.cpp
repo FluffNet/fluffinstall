@@ -2,12 +2,13 @@
 //-----------------------------------------------------------------------------
 //                  FluffInstall | ©FluffNet 2026
 //-----------------------------------------------------------------------------
-//                  Release 0.8.1; (2026-02-27)
+//                  Release 0.8.2; (2026-03-18)
 //
-//  - Standardized comment formats, no leading space.
-//  - Proper input validation in main().
-//  - Removed clearing terminal for sake of debugging.
-//  - Cleaned some junk logic.
+//  - Fixed input validation on chosing disk.
+//  - Fixed cin buffer getting stuck.
+//  - BRTFS (and more) added.
+//  - Improved disk selection functionality.
+//  - Proper string trimming for disks
 //  
 //-----------------------------------------------------------------------------
 //                  How does this program function? 
@@ -88,6 +89,14 @@ std::string y_N_input() {
         }
 
     return USR_INPUT;
+}
+
+std::string trim_str(const std::string& input)
+{
+    const char* WhiteSpace = " \t\v\r\n";
+    std::size_t start = input.find_first_not_of(WhiteSpace);
+    std::size_t end = input.find_last_not_of(WhiteSpace);
+    return start == end ? std::string() : input.substr(start, end - start + 1);
 }
 
 void HOSTNAME_CHECK()
@@ -348,11 +357,11 @@ int main()
 
     std::string USER_CHOICE = y_N_input(); //user gets "Continue? [y/N]: " on screen.
 
-    if (USER_CHOICE == "n") 
+    if (USER_CHOICE == "n")
     {
         return 1;
     }
-    USER_CHOICE = "";
+    
     //Check if the system's firmware is UEFI or LEGACY
     if (std::filesystem::exists("/sys/firmware/efi") && std::filesystem::is_directory("/sys/firmware/efi"))
     {
@@ -364,19 +373,35 @@ int main()
     }
 
     std::cout << "\nDetected firmware boot mode: " << BOOT_MODE << "\n\n";
-    //tell's the user the detected firmware mode'
-    std::cout << "Firstly, we want to select our target drive..\n\n\n";
+    //tell's the user the detected firmware mode
 
-    std::system("lsblk -d --output NAME,MODEL,SIZE,TYPE --noheadings | grep 'disk$'");
-    std::cout << "\n\n";
+    std::cout << "Firstly, we want to select our target drive...\n\n\n";
+    
+    std::cout << "On the left column below, drive names are listed such as \"sda\" or \"nvme0n1\" alongside with the model of the drive\n\n";
+    
+    bool VALID_DISK = false;
 
-    std::cout << "Enter the name of the target drive you want to install Fluff Linux on. For example: '/dev/sda': /dev/";
-    std::getline(std::cin >> std::ws, TARGETDISK);
-
-    if (!std::filesystem::exists("/dev/" + TARGETDISK))
+    while (!VALID_DISK)
     {
-        std::cout << TARGETDISK + " is not a valid block device.";
-        return 1;
+        std::system("lsblk -d --output NAME,MODEL,SIZE,TYPE --noheadings | grep 'disk$'");
+        std::cout << "\n\n";
+        std::cout << "Enter the name of the target drive you want to install Fluff Linux on: /dev/";
+        
+
+        std::string USR_DISK = "";
+
+        std::getline(std::cin, USR_DISK);
+
+        TARGETDISK = trim_str(USR_DISK);
+        
+        if (!std::filesystem::exists("/dev/" + TARGETDISK))
+        {
+            std::cout << "\033[31m" << TARGETDISK << " is not a valid block device." << "\033[0m\n";
+            std::cout << "\n\n\n\n\n";
+            continue;
+        }
+
+        VALID_DISK = true;
     }
 
     TARGETDISK = "/dev/" + TARGETDISK;
@@ -396,7 +421,7 @@ int main()
 
     USER_CHOICE = y_N_input(); //user gets "Continue? [y/N]: " on screen.
 
-    if (USER_CHOICE == "n") 
+    if (USER_CHOICE == "n")
     {
         return 1;
     }
@@ -406,7 +431,7 @@ int main()
     std::string umountCommand = "umount $(lsblk -nr -o MOUNTPOINT " + TARGETDISK + " | grep -v '^$') 2>/dev/null";
     std::system(umountCommand.c_str());
 
-    //  Clean up all the existing partitions
+    //Clean up all the existing partitions
     std::string wipefsCommand = "wipefs --all " + TARGETDISK;
     std::system(wipefsCommand.c_str());
 
@@ -442,7 +467,8 @@ int main()
         SWAP_PART = TARGETDISK + PART_SUFFIX + "1";
         ROOT_PART = TARGETDISK + PART_SUFFIX + "2";
     }
-    // Force clean previous partition metadata before formatting them due to the metadata carrying over in some cases
+
+    //Force clean previous partition metadata before formatting them due to the metadata carrying over in some cases
     std::system(("wipefs -a " + BOOT_PART).c_str());
     std::system(("wipefs -a " + SWAP_PART).c_str());
     std::system(("wipefs -a " + ROOT_PART).c_str());
@@ -450,14 +476,13 @@ int main()
     std::system(("mkfs.fat -F32 -n EFI " + BOOT_PART).c_str());
     std::system(("mkswap -L SWAP " + SWAP_PART).c_str());
     std::system(("mkfs.btrfs -f -L FluffLinux " + ROOT_PART).c_str());
-
     std::system(("mount -o compress=zstd,noatime " + ROOT_PART + " /mnt").c_str());
     std::system(("mount --mkdir " + BOOT_PART + " /mnt/boot").c_str());
 
     std::system(("swapon " + SWAP_PART).c_str());
 
     std::cout << "\nInstalling system...\n";
-    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter dnsmasq bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted networkmanager networkmanager-openvpn pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia-open nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid ttf-hack rust pacman-contrib swtpm btrfs-progs mission-center");
+    std::system("pacstrap -C /etc/pacman.d/fluffinstall.conf -K /mnt base flufflinux-filesystem linux linux-firmware linux-firmware-marvell broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter dnsmasq bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted  networkmanager networkmanager-openvpn partimage pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant wvdial xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia-open nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-full libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf vlc-plugin-gstreamer vlc-plugin-ffmpeg aurorae bluedevil breeze breeze-gtk breeze-plymouth discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme oxygen oxygen-sounds plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-sdk plasma-systemmonitor plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid nvim ttf-hack rust pacman-contrib swtpm btrfs-progs mission-center-flufflinux");
 
     //Copy a bunch of custom files into the filesystem
     std::system("cp /etc/os-release /mnt/etc/");
@@ -476,7 +501,7 @@ int main()
 
     //Start Configuring the system (Hostname,Username,password)
     std::cout << "\nConfiguring system... \n\n";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    //std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); //No more buffer to clear, thus no longer needed -Toast 2026-03-13
 
 	HOSTNAME_CHECK();
     USERNAME_CHECK();
