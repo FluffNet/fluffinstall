@@ -456,11 +456,6 @@ int main()
 
     std::string BOOT_PART = TARGETDISK + PART_SUFFIX + "1";
     std::string SWAP_PART, ROOT_PART;
-    
-    //Force clean previous partition metadata before formatting them due to the metadata carrying over in some cases
-    std::system(("wipefs -a " + BOOT_PART).c_str());
-    std::system(("wipefs -a " + SWAP_PART).c_str());
-    std::system(("wipefs -a " + ROOT_PART).c_str());
 
     if (BOOT_MODE == "UEFI")
     {
@@ -472,6 +467,11 @@ int main()
         SWAP_PART = TARGETDISK + PART_SUFFIX + "1";
         ROOT_PART = TARGETDISK + PART_SUFFIX + "2";
     }
+
+    //Force clean previous partition metadata before formatting them due to the metadata carrying over in some cases
+    std::system(("wipefs -a " + BOOT_PART).c_str());
+    std::system(("wipefs -a " + SWAP_PART).c_str());
+    std::system(("wipefs -a " + ROOT_PART).c_str());
 
     std::system(("mkfs.fat -F32 -n EFI " + BOOT_PART).c_str());
     std::system(("mkswap -L SWAP " + SWAP_PART).c_str());
