@@ -44,7 +44,7 @@ Special characters are not allowed (for example: @ and !)
 Must start with a lowercase letter; cannot be only numbers
 Max length: 32 characters)";
 
-const std::string VERSION = "0.8.1";
+const std::string VERSION = "0.8.2";
 
 std::string HOSTNAME;
 std::string USERNAME;
