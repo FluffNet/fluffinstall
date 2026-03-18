@@ -372,12 +372,12 @@ int main()
         BOOT_MODE = "BIOS-LEGACY";
     }
 
-    std::cout << "\nDetected firmware boot mode: " << BOOT_MODE << "\n\n";
-    //tell's the user the detected firmware mode
+    //std::cout << "\nDetected firmware boot mode: " << BOOT_MODE << "\n\n";
+    //there is really no need for this anymore as we only do UEFI - Shai 2026-03-18
 
-    std::cout << "Firstly, we want to select our target drive...\n\n\n";
+    std::cout << "First, we need to select the target drive...\n\n\n";
     
-    std::cout << "On the left column below, drive names are listed such as \"sda\" or \"nvme0n1\" alongside with the model of the drive\n\n";
+    std::cout << "In the left column below, drive names are listed, for example: \"sda\" or \"nvme0n1\" \n\n";
     
     bool VALID_DISK = false;
 
@@ -491,6 +491,8 @@ int main()
     std::system("cp /etc/issue /mnt/etc/");
     std::system("mkdir -p /mnt/etc/fastfetch"); //fastfetch logo
     std::system("cp /etc/fastfetch/config.jsonc /mnt/etc/fastfetch");
+    std::system("mkdir -p /mnt/etc/pacman.d/hooks");
+    std::system("cp /etc/pacman.d/cleanup-cache.hook /mnt/etc/pacman.d/hooks"); //cache cleanup hook
 
     std::system("cp -r /etc/skel /mnt/etc/");
     std::system("cp /etc/nanorc /mnt/etc/");
