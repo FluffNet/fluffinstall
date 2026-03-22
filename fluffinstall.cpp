@@ -512,7 +512,7 @@ int main()
     std::string archChrootCmd =
     "arch-chroot /mnt /bin/bash -c '"
     "echo \"" + HOSTNAME + "\" > /etc/hostname && "
-    "useradd -m -G wheel,kvm,libvirt -s /bin/zsh " + USERNAME + " && "
+    "useradd -m -G uucp,wheel,kvm,libvirt -s /bin/zsh " + USERNAME + " && "
     "echo \"" + USERNAME + ":" + PASSWORD + "\" | chpasswd && "
     "sed -i \"s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/\" /etc/sudoers'";
 
@@ -595,7 +595,7 @@ int main()
     
     std::cout << "\n\n\n";
     std::cout << "\033[32mThe installation has finished!\033[0m\n";
-    std::cout << "Fluff linux is now bootable on the target drive.\n";
+    std::cout << "Fluff Linux is now bootable on the target drive.\n";
     std::cout << "Press Enter to exit the installer... \n";
     std::cin.get();
 
