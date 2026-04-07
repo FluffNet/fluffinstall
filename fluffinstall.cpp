@@ -9,6 +9,7 @@
 //  - BRTFS (and more) added.
 //  - Improved disk selection functionality.
 //  - Proper string trimming for disks
+//  - Fixed empty disk input bug
 //  
 //-----------------------------------------------------------------------------
 //                  How does this program function? 
@@ -393,6 +394,11 @@ int main()
         std::getline(std::cin, USR_DISK);
 
         TARGETDISK = trim_str(USR_DISK);
+
+        if (TARGETDISK == "") 
+        {
+            continue;
+        }
         
         if (!std::filesystem::exists("/dev/" + TARGETDISK))
         {
