@@ -513,13 +513,14 @@ int main()
     USERNAME_CHECK();
     PASSWORD_CHECK();
 
-    std::string archChrootCmd =
+std::string archChrootCmd =
     "arch-chroot /mnt /bin/bash -c '"
     "echo \"" + HOSTNAME + "\" > /etc/hostname && "
     "usermod -s /bin/zsh root && "
     "useradd -m -G uucp,wheel,kvm,libvirt -s /bin/zsh " + USERNAME + " && "
     "echo \"" + USERNAME + ":" + PASSWORD + "\" | chpasswd && "
-    "sed -i \"s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/\" /etc/sudoers'";
+    "sed -i \"s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/\" /etc/sudoers && "
+    "echo \"Defaults env_keep += \\\"VISUAL EDITOR\\\"\" >> /etc/sudoers'";
 
 
     std::system(archChrootCmd.c_str());
