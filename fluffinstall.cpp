@@ -30,6 +30,7 @@
 #include <string>
 #include <cctype>
 #include <algorithm>
+#include <cstdio>
 
 const std::string HOSTNAME_REQUIREMENTS = R"(Hostname Requirements:
 Allowed characters: letters (a-z and A-Z), digits (0-9), dash (-), and dot (.).
@@ -513,17 +514,32 @@ int main()
     USERNAME_CHECK();
     PASSWORD_CHECK();
 
-std::string archChrootCmd =
+    std::string archChrootCmd =
     "arch-chroot /mnt /bin/bash -c '"
     "echo \"" + HOSTNAME + "\" > /etc/hostname && "
     "usermod -s /bin/zsh root && "
     "useradd -m -G uucp,wheel,kvm,libvirt -s /bin/zsh " + USERNAME + " && "
-    "echo \"" + USERNAME + ":" + PASSWORD + "\" | chpasswd && "
     "sed -i \"s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/\" /etc/sudoers && "
     "echo \"Defaults env_keep += \\\"VISUAL EDITOR\\\"\" >> /etc/sudoers'";
 
-
     std::system(archChrootCmd.c_str());
+
+    FILE* chpasswdPipe = popen("arch-chroot /mnt chpasswd", "w");
+    if (!chpasswdPipe)
+    {
+        std::cout << "\033[31m" << "Failed to run chpasswd." << "\033[0m\n";
+        return 1;
+    }
+
+    std::string chpasswdInput = USERNAME + ":" + PASSWORD + "\n";
+    std::fwrite(chpasswdInput.c_str(), 1, chpasswdInput.size(), chpasswdPipe);
+
+    int chpasswdStatus = pclose(chpasswdPipe);
+    if (chpasswdStatus != 0)
+    {
+        std::cout << "\033[31m" << "Failed to set the user password." << "\033[0m\n";
+        return 1;
+    }
 
     std::cout << "\nConfiguring BootLoader (GRUB) ... \n";
     if (BOOT_MODE == "UEFI")
