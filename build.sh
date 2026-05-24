@@ -1,2 +1,9 @@
 #!/bin/bash
-g++ -std=c++17 fluffinstall.cpp -o fluffinstall
+
+rustc fluffinstall.rs \
+  -C opt-level=3 \
+  -C lto=fat \
+  -C codegen-units=1 \
+  -C panic=abort \
+  -C strip=symbols
+
