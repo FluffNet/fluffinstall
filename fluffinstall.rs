@@ -32,7 +32,7 @@ Max length: 32 characters";
 // All packages and their dependencies MUST exist in the offline repository
 // located at /usr/lib/fluffinstall/packages/ (as defined in /etc/pacman.d/fluffinstall.conf).
 // If any package or dependency is missing, pacstrap WILL fail.
-const PACKAGE_LIST: &str = "base flufflinux-filesystem linux linux-firmware linux-firmware-marvell archlinux-keyring broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter dnsmasq bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted networkmanager networkmanager-openvpn pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim virtualbox-guest-utils-nox wireless-regdb wpa_supplicant xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware sddm mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia-open nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator flufflinux-vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still hunspell-en_us gwenview qt5-imageformats spectacle speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-desktop libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf aurorae bluedevil breeze breeze-gtk breeze-plymouth flufflinux-discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwin-x11 kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style sddm-kcm spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid ttf-hack rust pacman-contrib swtpm btrfs-progs mission-center-flufflinux flufflinux-hooks bind wget cronie unzip bc jq lsof tree ufw";
+const PACKAGE_LIST: &str = "base flufflinux-filesystem linux linux-firmware linux-firmware-marvell archlinux-keyring broadcom-wl linux-firmware-bnx2x amd-ucode arch-install-scripts intel-ucode b43-fwcutter dnsmasq bolt clonezilla cryptsetup ddrescue diffutils dmidecode dmraid dosfstools e2fsprogs edk2-shell efibootmgr grub ethtool exfatprogs fatresize fsarchiver gpart git gpm gptfdisk hdparm less libusb-compat livecd-sounds lsscsi lvm2 man-db man-pages mdadm memtest86+-efi mkinitcpio mkinitcpio-archiso mkinitcpio-nfs-utils modemmanager mtools nano nfs-utils nmap ntfs-3g nvme-cli open-iscsi openssh partclone parted networkmanager networkmanager-openvpn pv qemu-guest-agent rp-pppoe rsync sdparm sg3_utils smartmontools squashfs-tools sudo systemd-resolvconf tcpdump testdisk tmux tpm2-tools tpm2-tss udftools usb_modeswitch usbmuxd usbutils vim wireless-regdb wpa_supplicant xfsprogs zsh grml-zsh-config-flufflinux fastfetch htop konsole kate dolphin kdialog alsa-lib alsa-utils alsa-ucm-conf pipewire pipewire-pulse wireplumber pipewire-alsa pipewire-jack sof-firmware plasma-login-manager mesa vulkan-intel vulkan-mesa-layers vulkan-tools nvidia-open nvidia-utils vulkan-radeon vulkan-icd-loader system-config-printer cups firefox gnome-disk-utility noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra ttf-liberation flatpak gnome-calculator flufflinux-vlc ffmpegthumbs kdegraphics-thumbnailers thunderbird libreoffice-still hunspell-en_us gwenview qt5-imageformats speech-dispatcher lib32-alsa-lib lib32-alsa-plugins lib32-libpulse lib32-pipewire lib32-alsa-oss lib32-mesa lib32-vulkan-radeon lib32-vulkan-intel lib32-nvidia-utils lib32-sdl2 qemu-desktop libvirt tlp tlp-rdw thermald libimobiledevice ifuse gvfs-mtp android-udev gvfs-gphoto2 gphoto2 hplip base-devel yay btop traceroute ark remmina freerdp libvncserver edk2-ovmf aurorae bluedevil breeze breeze-gtk breeze-plymouth flufflinux-discover drkonqi flatpak-kcm kactivitymanagerd kde-cli-tools kde-gtk-config kdecoration kdeplasma-addons kgamma kglobalacceld kinfocenter kmenuedit kpipewire krdp kscreen kscreenlocker ksshaskpass ksystemstats kwallet-pam kwayland kwin kwrited layer-shell-qt libkscreen libksysguard libplasma milou ocean-sound-theme plasma-activities plasma-activities-stats plasma-browser-integration plasma-desktop plasma-disks plasma-firewall plasma-integration plasma-nm plasma-pa plasma-thunderbolt plasma-vault plasma-welcome plasma-workspace plasma-workspace-wallpapers plasma5support plymouth-kcm polkit-kde-agent powerdevil print-manager qqc2-breeze-style spectacle systemsettings wacomtablet xdg-desktop-portal-kde ttf-dejavu ttf-droid ttf-hack rust python pacman-contrib swtpm btrfs-progs mission-center-flufflinux flufflinux-hooks bind wget cronie unzip bc jq lsof tree ufw";
 
 const SIGINT: i32 = 2;
 const SIGQUIT: i32 = 3;
@@ -345,7 +345,7 @@ fn generate_hostname() -> String {
         digits.push((b'0' + (byte % 10)) as char);
     }
 
-    format!("fluff-{}{}{}", first_letter, second_letter, digits)
+    format!("FL-{}{}{}", first_letter, second_letter, digits)
 }
 
 fn print_hostname_requirements() {
@@ -738,10 +738,12 @@ fn main() {
     run_command("cp",&["/etc/pacman.conf","/mnt/etc/"]);
     run_command("cp",&["/etc/pacman.d/mirrorlist","/mnt/etc/pacman.d/mirrorlist"]);
     run_command("cp",&["/etc/locale.conf","/mnt/etc/"]);
-    run_command("mkdir",&["-p","/mnt/etc/sddm.conf.d"]);
     run_command("cp",&["/etc/fonts/conf.d/99-emoji-fallback.conf","/mnt/etc/fonts/conf.d/"]);
-    run_command("cp",&["/etc/.sddm.conf.d/kde_settings.conf","/mnt/etc/sddm.conf.d"]);
-    run_command("cp",&["-r","/usr/share/sddm/themes/fluff-breeze/","/mnt/usr/share/sddm/themes/"]);
+    run_command("mkdir",&["-p","/mnt/etc/plasmalogin.conf.d"]);
+    run_command("cp",&["/usr/lib/fluffinstall/plasmalogin-etc/flufflinux.conf","/mnt/etc/plasmalogin.conf.d"]);
+    run_command("cp",&["/usr/lib/fluffinstall/plasmalogin-etc/plasmalogin.conf","/mnt/etc/"]);
+    run_command("cp",&["-r","/usr/lib/fluffinstall/plasmalogin","/mnt/var/lib/"]);
+    run_command("arch-chroot",&["/mnt","chown","-R","plasmalogin:plasmalogin","/var/lib/plasmalogin"]);
     run_command("cp",&["/usr/share/pixmaps/flufflinux-logo.png","/mnt/usr/share/pixmaps/"]);
     run_command("ln",&["-sf","/usr/share/zoneinfo/UTC","/mnt/etc/localtime"]); // temporary until timezone setup is added
     run_command("cp",&["/usr/lib/firefox/distribution/policies.json","/mnt/usr/lib/firefox/distribution/"]); //Firefox middle-mouse click
@@ -749,7 +751,7 @@ fn main() {
     run_command("cp",&["/etc/fastfetch/config.jsonc","/mnt/etc/fastfetch"]);
 
 
-    // getwine files (to be packaged soon TEMPORARY)
+    // getwine files
     run_command("cp",&["-r","/etc/getwine","/mnt/etc/"]);
     run_command("cp",&["/usr/bin/getwine","/mnt/usr/bin"]);
     run_command("arch-chroot",&["/mnt","chmod","+x","/usr/bin/getwine"]);
@@ -827,7 +829,7 @@ fn main() {
     run_command("chown",&["root:root",&format!("/mnt/home/{}/Desktop/trash:⁄.desktop", username)]); //Makes trash icon on desktop non-removable unless deleted with sudo
 
     // Enable system services
-    run_command("arch-chroot",&["/mnt","systemctl","enable","sddm"]);
+    run_command("arch-chroot",&["/mnt","systemctl","enable","plasmalogin.service"]);
     run_command("arch-chroot",&["/mnt","systemctl","enable","NetworkManager"]);
     run_command("arch-chroot",&["/mnt","ln","-sf","/run/NetworkManager/resolv.conf","/etc/resolv.conf"]);
     run_command("arch-chroot",&["/mnt","systemctl","enable","bluetooth"]);
