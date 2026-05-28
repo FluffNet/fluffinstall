@@ -483,8 +483,8 @@ fn username_setup() -> String {
         let username = input.trim();
 
         if username.is_empty() {
-            println!("\nNo user name was entered. Offering default user name.\n");
-            print!("Use \"user\" as the user name? [Y/n]: ");
+            println!("\n\nNo user name was entered. Offering default user name.\n");
+            print!("Set \"user\" as the user name? [Y/n]: ");
 
             if confirm_yes_default() {
                 return "user".to_string();
