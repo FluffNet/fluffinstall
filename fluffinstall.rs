@@ -744,11 +744,8 @@ fn main() {
     run_command("cp",&["/usr/lib/fluffinstall/plasmalogin-etc/plasmalogin.conf","/mnt/etc/"]);
     run_command("cp",&["-r","/usr/lib/fluffinstall/plasmalogin","/mnt/var/lib/"]);
     run_command("arch-chroot",&["/mnt","chown","-R","plasmalogin:plasmalogin","/var/lib/plasmalogin"]);
-    run_command("cp",&["/usr/share/pixmaps/flufflinux-logo.png","/mnt/usr/share/pixmaps/"]);
     run_command("ln",&["-sf","/usr/share/zoneinfo/UTC","/mnt/etc/localtime"]); // temporary until timezone setup is added
     run_command("cp",&["/usr/lib/firefox/distribution/policies.json","/mnt/usr/lib/firefox/distribution/"]); //Firefox middle-mouse click
-    run_command("mkdir",&["-p","/mnt/etc/fastfetch"]);
-    run_command("cp",&["/etc/fastfetch/config.jsonc","/mnt/etc/fastfetch"]);
 
 
     // getwine files
