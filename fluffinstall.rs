@@ -634,6 +634,27 @@ fn force_unmount_target(target_disk: &str) {
     }
 }
 
+fn sync_and_unmount_target() {
+    let _ = Command::new("pkill").arg("gpg-agent").status();
+
+    run_command("sync", &[]);
+
+    for _ in 0..10 {
+        if Command::new("umount")
+            .args(["-R", "/mnt"])
+            .stderr(Stdio::null())
+            .status()
+            .map_or(false, |s| s.success())
+            {
+                return;
+            }
+
+            std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+
+    println!("\nwarning: umount cleanup did not finish successfully.");
+}
+
 fn main() {
     if unsafe { geteuid() } != 0 {
         exit_with_error("fluffinstall must be run as root.");
@@ -823,6 +844,8 @@ fn main() {
     print_stage("Password Setup");
     password_setup(&username);
 
+    println!("\nFinalizing installation...");
+
     run_command("chown",&["root:root",&format!("/mnt/home/{}/Desktop/trash:⁄.desktop", username)]); //Makes trash icon on desktop non-removable unless deleted with sudo
 
     // Enable system services
@@ -852,11 +875,7 @@ fn main() {
     run_command("arch-chroot",&["/mnt","setfacl","-m","u:libvirt-qemu:rwx",&format!("/home/{}", username)]);
     run_command("arch-chroot",&["/mnt","flatpak","override","--filesystem=home","org.virt_manager.virt-manager"]);
 
-    let _ = Command::new("pkill").arg("gpg-agent").status();
-
-    run_command("sync",&[]);
-    run_command("umount",&["/mnt/boot"]);
-    run_command("umount",&["/mnt"]);
+    sync_and_unmount_target();
 
     println!("\n\n{}The installation has finished! :){}", BOLD_GREEN, RESET);
     println!("Fluff Linux is now bootable on the target drive.");
