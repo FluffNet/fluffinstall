@@ -750,8 +750,6 @@ fn main() {
     run_command("pacstrap", &pacstrap_args);
 
     // Copy custom files
-    run_command("cp",&["/etc/os-release","/mnt/etc/"]);
-    run_command("cp",&["/usr/lib/os-release","/mnt/usr/lib/"]);
     run_command("cp",&["/etc/motd","/mnt/etc/"]);
     run_command("cp",&["/etc/issue","/mnt/etc/"]);
     run_command("cp",&["-r","/etc/skel","/mnt/etc/"]);
