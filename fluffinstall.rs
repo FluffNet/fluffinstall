@@ -819,6 +819,19 @@ fn main() {
     run_command("arch-chroot",&["/mnt","useradd","-m","-G","uucp,wheel,kvm,libvirt","-s","/bin/zsh",&username]);
 
     run_command(
+    "arch-chroot",
+    &[
+        "/mnt",
+        "sh",
+        "-c",
+        &format!(
+            "sed -i 's|^HomeUrl=/home/|HomeUrl=/home/{}/|' /home/{}/.config/dolphinrc && sed -i '/^HomeUrl=/a RememberOpenTabs=false' /home/{}/.config/dolphinrc",
+            username, username, username
+        ),
+    ],
+);
+
+    run_command(
         "arch-chroot",
         &[
             "/mnt",
