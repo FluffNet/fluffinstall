@@ -825,7 +825,7 @@ fn main() {
         "sh",
         "-c",
         &format!(
-            "sed -i 's|^HomeUrl=/home/|HomeUrl=/home/{}/|' /home/{}/.config/dolphinrc && sed -i '/^HomeUrl=/a RememberOpenTabs=false' /home/{}/.config/dolphinrc",
+            "sed -i 's|^HomeUrl=/home/|HomeUrl=/home/{}/|' /home/{}/.config/dolphinrc && sed -i '/^HomeUrl=/a RememberOpenedTabs=false' /home/{}/.config/dolphinrc",
             username, username, username
         ),
     ],
