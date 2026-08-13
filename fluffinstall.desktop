@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Fluff Linux Installer
+Comment=Install Fluff Linux
+Exec=fluffinstall
+Icon=flufflinux-logo
+Terminal=false
+Type=Application
+Categories=System;
