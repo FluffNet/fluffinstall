@@ -71,6 +71,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "rebootSystem"]
         fn reboot_system(&self);
+
+        #[qinvokable]
+        #[cxx_name = "shutdownSystem"]
+        fn shutdown_system(&self);
     }
 
     impl cxx_qt::Threading for InstallerBackend {}
@@ -120,7 +124,7 @@ impl qobject::InstallerBackend {
     }
 
     pub fn start_installation(mut self: Pin<&mut Self>, target_disk: &QString, hostname: &QString) {
-        if *self.installing() {
+        if *self.installing() || *self.finished() {
             return;
         }
 
@@ -202,6 +206,10 @@ impl qobject::InstallerBackend {
 
     pub fn reboot_system(&self) {
         let _ = Command::new("sudo").arg("reboot").spawn();
+    }
+
+    pub fn shutdown_system(&self) {
+        let _ = Command::new("sudo").args(["shutdown", "now"]).spawn();
     }
 }
 

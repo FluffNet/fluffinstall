@@ -36,6 +36,7 @@ ApplicationWindow {
         implicitHeight: 44
         font.pixelSize: 15
         hoverEnabled: true
+        highlighted: activeFocus
         palette.buttonText: enabled ? "#202020" : "#777777"
         palette.highlightedText: enabled ? "#202020" : "#777777"
         icon.color: enabled ? "#202020" : "#777777"
@@ -324,6 +325,27 @@ ApplicationWindow {
         powerWarning = backend.installationPowerWarning()
     }
 
+    function showPage(nextPage) {
+        designSurface.forceActiveFocus(Qt.OtherFocusReason)
+        page = nextPage
+    }
+
+    function showCancellationDialog() {
+        if (window.page !== 3 || !backend.installing || backend.cancelling)
+            return
+
+        cancelWindow.show()
+        cancelWindow.raise()
+        cancelWindow.requestActivate()
+    }
+
+    onClosing: function(close) {
+        if (window.page === 3 && backend.installing) {
+            close.accepted = false
+            window.showCancellationDialog()
+        }
+    }
+
     Timer {
         interval: 2000
         repeat: true
@@ -342,7 +364,7 @@ ApplicationWindow {
         target: backend
         function onFinishedChanged() {
             if (backend.finished)
-                window.page = 4
+                window.showPage(4)
         }
     }
 
@@ -361,6 +383,15 @@ ApplicationWindow {
 
         // Welcome
         Item {
+            id: welcomePage
+            onVisibleChanged: {
+                if (visible)
+                    Qt.callLater(function() {
+                        if (welcomePage.visible)
+                            startButton.forceActiveFocus(Qt.TabFocusReason)
+                    })
+            }
+
             RowLayout {
                 anchors.centerIn: parent
                 width: 824
@@ -416,8 +447,10 @@ ApplicationWindow {
                             anchors.horizontalCenterOffset: 90
                             width: 150
                             text: "Start  →"
-                            highlighted: true
-                            onClicked: window.page = 1
+                            onClicked: {
+                                if (window.page === 0)
+                                    window.showPage(1)
+                            }
                         }
                     }
                 }
@@ -436,6 +469,31 @@ ApplicationWindow {
 
         // Disk selection
         Item {
+            id: driveSelectionPage
+            onVisibleChanged: {
+                if (visible)
+                    Qt.callLater(function() {
+                        if (!driveSelectionPage.visible)
+                            return
+                        if (window.selectedDrive >= 0)
+                            driveNextButton.forceActiveFocus(Qt.TabFocusReason)
+                        else
+                            driveBackButton.forceActiveFocus(Qt.TabFocusReason)
+                    })
+            }
+
+            Connections {
+                target: window
+                function onSelectedDriveChanged() {
+                    if (!driveSelectionPage.visible)
+                        return
+                    Qt.callLater(function() {
+                        if (driveSelectionPage.visible && window.selectedDrive >= 0)
+                            driveNextButton.forceActiveFocus(Qt.TabFocusReason)
+                    })
+                }
+            }
+
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 42
@@ -611,12 +669,23 @@ ApplicationWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    InstallerButton { text: "←  Back"; onClicked: window.page = 0 }
+                    InstallerButton {
+                        id: driveBackButton
+                        text: "←  Back"
+                        onClicked: {
+                            if (window.page === 1)
+                                window.showPage(0)
+                        }
+                    }
                     Item { Layout.fillWidth: true }
                     InstallerButton {
+                        id: driveNextButton
                         text: "Next  →"
                         enabled: window.selectedDrive >= 0
-                        onClicked: window.page = 2
+                        onClicked: {
+                            if (window.page === 1 && window.selectedDrive >= 0)
+                                window.showPage(2)
+                        }
                     }
                 }
             }
@@ -628,7 +697,10 @@ ApplicationWindow {
             onVisibleChanged: {
                 if (visible) {
                     window.refreshPowerStatus()
-                    noButton.forceActiveFocus()
+                    Qt.callLater(function() {
+                        if (confirmationPage.visible)
+                            noButton.forceActiveFocus(Qt.TabFocusReason)
+                    })
                 }
             }
 
@@ -905,9 +977,11 @@ ApplicationWindow {
                         id: noButton
                         text: "No"
                         icon.name: "dialog-cancel"
-                        highlighted: activeFocus
                         Layout.preferredWidth: 112
-                        onClicked: window.page = 1
+                        onClicked: {
+                            if (window.page === 2)
+                                window.showPage(1)
+                        }
                     }
 
                     Label {
@@ -929,10 +1003,13 @@ ApplicationWindow {
                             text: "Yes  →"
                             enabled: window.powerWarning.length === 0
                             onClicked: {
+                                if (window.page !== 2 || backend.installing
+                                        || backend.finished || window.selectedDrive < 0)
+                                    return
                                 window.refreshPowerStatus()
                                 if (window.powerWarning.length > 0)
                                     return
-                                window.page = 3
+                                window.showPage(3)
                                 backend.startInstallation(
                                     "/dev/" + drives[selectedDrive].device,
                                     generatedHostname
@@ -971,6 +1048,15 @@ ApplicationWindow {
 
         // Progress
         Item {
+            id: progressPage
+            onVisibleChanged: {
+                if (visible)
+                    Qt.callLater(function() {
+                        if (progressPage.visible)
+                            progressPage.forceActiveFocus(Qt.OtherFocusReason)
+                    })
+            }
+
             Window {
                 id: cancelWindow
                 width: 520
@@ -991,10 +1077,14 @@ ApplicationWindow {
                        | Qt.WindowStaysOnTopHint
 
                 onVisibleChanged: {
-                    if (visible)
+                    if (visible) {
                         Qt.callLater(function() {
-                            keepInstallingButton.forceActiveFocus()
+                            if (cancelWindow.visible)
+                                keepInstallingButton.forceActiveFocus(Qt.TabFocusReason)
                         })
+                    } else if (progressPage.visible && backend.installing) {
+                        progressPage.forceActiveFocus(Qt.OtherFocusReason)
+                    }
                 }
 
                 ColumnLayout {
@@ -1043,24 +1133,29 @@ ApplicationWindow {
                     Item { Layout.fillHeight: true }
 
                     RowLayout {
-                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: 64
+
+                        InstallerButton {
+                            id: confirmCancellationButton
+                            text: "Yes"
+                            Layout.preferredWidth: 120
+                            onClicked: {
+                                if (!cancelWindow.visible || window.page !== 3
+                                        || !backend.installing)
+                                    return
+                                cancelWindow.close()
+                                backend.cancelInstallation()
+                            }
+                        }
 
                         InstallerButton {
                             id: keepInstallingButton
                             text: "No"
-                            highlighted: activeFocus
-                            Layout.preferredWidth: 120
-                            onClicked: cancelWindow.close()
-                        }
-
-                        Item { Layout.fillWidth: true }
-
-                        InstallerButton {
-                            text: "Yes"
                             Layout.preferredWidth: 120
                             onClicked: {
-                                cancelWindow.close()
-                                backend.cancelInstallation()
+                                if (cancelWindow.visible)
+                                    cancelWindow.close()
                             }
                         }
                     }
@@ -1072,6 +1167,13 @@ ApplicationWindow {
                 function onInstallingChanged() {
                     if (!backend.installing && cancelWindow.visible)
                         cancelWindow.close()
+                }
+                function onErrorMessageChanged() {
+                    if (backend.errorMessage.length > 0 && progressPage.visible)
+                        Qt.callLater(function() {
+                            if (progressPage.visible && backend.errorMessage.length > 0)
+                                progressCloseButton.forceActiveFocus(Qt.TabFocusReason)
+                        })
                 }
             }
 
@@ -1094,7 +1196,7 @@ ApplicationWindow {
 
                 Label {
                     visible: !backend.errorMessage.startsWith("Installation cancelled.")
-                    text: "Please wait while Fluff Linux is being installed on the drive. It may take a while. Please keep the computer powered on and the installation media connected."
+                    text: "Please wait while Fluff Linux is being installed on the drive. It may take a while.\nPlease keep the computer powered on and the installation media connected."
                     font.pixelSize: 15
                     color: "#65758b"
                     wrapMode: Text.WordWrap
@@ -1192,6 +1294,7 @@ ApplicationWindow {
                 }
 
                 InstallerButton {
+                    id: progressCloseButton
                     visible: backend.errorMessage.length > 0
                     text: "Close"
                     icon.name: "window-close"
@@ -1199,28 +1302,26 @@ ApplicationWindow {
                     Layout.topMargin: 8
                     Layout.alignment: Qt.AlignHCenter
                     transform: Translate { x: 4 }
-                    onClicked: window.close()
+                    onClicked: {
+                        if (window.page === 3 && backend.errorMessage.length > 0)
+                            window.close()
+                    }
                 }
             }
 
-            InstallerButton {
-                visible: backend.installing
-                enabled: !backend.cancelling
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: 28
-                text: backend.cancelling ? "Cancelling..." : "Cancel"
-                icon.name: backend.cancelling ? "" : "dialog-cancel"
-                onClicked: {
-                    cancelWindow.show()
-                    cancelWindow.raise()
-                    cancelWindow.requestActivate()
-                }
-            }
         }
 
         // Finished
         Item {
+            id: finishedPage
+            onVisibleChanged: {
+                if (visible)
+                    Qt.callLater(function() {
+                        if (finishedPage.visible)
+                            shutdownButton.forceActiveFocus(Qt.TabFocusReason)
+                    })
+            }
+
             ColumnLayout {
                 anchors.centerIn: parent
                 width: Math.min(parent.width - 120, 620)
@@ -1249,7 +1350,7 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                 }
                 Label {
-                    text: "Please restart the system to continue setting up Fluff Linux."
+                    text: "Please restart the system and remove the installation media\nto continue setting up Fluff Linux."
                     font.pixelSize: 16
                     color: "#54657c"
                     wrapMode: Text.WordWrap
@@ -1257,23 +1358,47 @@ ApplicationWindow {
                     Layout.fillWidth: true
                 }
                 Item { Layout.preferredHeight: 18 }
-                RowLayout {
-                    spacing: 6
+                ColumnLayout {
+                    spacing: 24
                     Layout.alignment: Qt.AlignHCenter
 
-                    InstallerButton {
-                        text: "Restart"
-                        icon.name: "system-reboot"
-                        highlighted: true
-                        Layout.preferredWidth: 160
-                        onClicked: backend.rebootSystem()
+                    RowLayout {
+                        spacing: 12
+                        Layout.alignment: Qt.AlignHCenter
+
+                        InstallerButton {
+                            id: shutdownButton
+                            text: "Shut down"
+                            icon.name: "system-shutdown"
+                            Layout.preferredWidth: 160
+                            onClicked: {
+                                if (window.page === 4 && backend.finished)
+                                    backend.shutdownSystem()
+                            }
+                        }
+
+                        InstallerButton {
+                            id: restartButton
+                            text: "Restart"
+                            icon.name: "system-reboot"
+                            Layout.preferredWidth: 160
+                            onClicked: {
+                                if (window.page === 4 && backend.finished)
+                                    backend.rebootSystem()
+                            }
+                        }
                     }
 
                     InstallerButton {
+                        id: finishedCloseButton
                         text: "Close"
                         icon.name: "window-close"
                         Layout.preferredWidth: 160
-                        onClicked: window.close()
+                        Layout.alignment: Qt.AlignHCenter
+                        onClicked: {
+                            if (window.page === 4)
+                                window.close()
+                        }
                     }
                 }
             }
