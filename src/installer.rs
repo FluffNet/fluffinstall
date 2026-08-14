@@ -1,7 +1,7 @@
 //! Performs the installation and reports each visible stage to the interface.
 
 use std::fs;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{Read, Write};
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -890,31 +890,13 @@ impl ConfigurationProgress {
     }
 }
 
-fn utf8_locale_count() -> usize {
-    fs::read_to_string("/mnt/etc/locale.gen")
-        .map(|contents| {
-            contents
-                .lines()
-                .filter(|line| {
-                    let line = line.trim();
-                    if line.is_empty() {
-                        return false;
-                    }
-                    let line = line.strip_prefix('#').unwrap_or(line).trim_start();
-                    let mut fields = line.split_whitespace();
-                    fields.next().is_some() && fields.next() == Some("UTF-8")
-                })
-                .count()
-        })
-        .unwrap_or(0)
-}
-
 fn enable_all_utf8_locales(
     callback: &mut impl FnMut(Progress),
     progress: &mut ConfigurationProgress,
 ) -> Result<(), String> {
     // FluffSetup may choose any language or regional format on first boot.
-    // Generate every UTF8 locale now so later changes do not need downloads.
+    // Enable every UTF8 locale while the glibc-locales package provides the
+    // precompiled locale data.
     run(
         "arch-chroot",
         &[
@@ -924,38 +906,9 @@ fn enable_all_utf8_locales(
             r#"sed -E -i 's/^#[[:space:]]*([[:alnum:]_@.-]+[[:space:]]+UTF-8[[:space:]]*)$/\1/' /etc/locale.gen"#,
         ],
     )
-    .map_err(|_| "Failed to configure system - locale-gen failed.".to_string())?;
+    .map_err(|_| "Failed to configure system - locale configuration failed.".to_string())?;
     progress.complete(callback);
-
-    let mut child = Command::new("pkexec")
-        .process_group(0)
-        .arg(privileged_program("arch-chroot"))
-        .args(["/mnt", "locale-gen"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .map_err(|_| "Failed to configure system - locale-gen failed.".to_string())?;
-    track_privileged_child(&child);
-
-    if let Some(stdout) = child.stdout.take() {
-        for line in BufReader::new(stdout).lines() {
-            let Ok(line) = line else {
-                break;
-            };
-            if line.trim_end().ends_with("... done") {
-                progress.complete(callback);
-            }
-        }
-    }
-
-    if wait_for_privileged_child(&mut child)
-        .map_err(|_| "Failed to configure system - locale-gen failed.".to_string())?
-        .success()
-    {
-        Ok(())
-    } else {
-        Err("Failed to configure system - locale-gen failed.".to_string())
-    }
+    Ok(())
 }
 
 fn sync_and_unmount_target() {
@@ -1187,7 +1140,7 @@ pub fn install(
 
     let mut configuration_progress = ConfigurationProgress {
         completed: 0,
-        total: NON_LOCALE_CONFIGURATION_OPERATIONS + utf8_locale_count(),
+        total: NON_LOCALE_CONFIGURATION_OPERATIONS + 1,
     };
     configuration_progress.report(&mut callback);
 
