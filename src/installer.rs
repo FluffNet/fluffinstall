@@ -1359,14 +1359,6 @@ pub fn install(
     ));
     config_operation!(set_password(username, "fluff"));
     config_operation!(run(
-        "chown",
-        &[
-            "root:root",
-            &format!("/mnt/home/{username}/Desktop/trash:⁄.desktop"),
-        ],
-    ));
-
-    config_operation!(run(
         "arch-chroot",
         &["/mnt", "systemctl", "enable", "plasmalogin.service"],
     ));
