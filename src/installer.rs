@@ -1306,14 +1306,7 @@ pub fn install(
     config_operation!(run(
         "arch-chroot",
         &[
-            "/mnt",
-            "useradd",
-            "-m",
-            "-G",
-            "uucp,wheel,kvm,libvirt",
-            "-s",
-            "/bin/zsh",
-            username,
+            "/mnt", "useradd", "-m", "-G", "wheel", "-s", "/bin/zsh", username,
         ],
     ));
     config_operation!(run(
@@ -1424,27 +1417,6 @@ pub fn install(
         "arch-chroot",
         &["/mnt", "systemctl", "enable", "virtsecretd"],
     ));
-    config_operation!(run(
-        "arch-chroot",
-        &[
-            "/mnt",
-            "setfacl",
-            "-m",
-            "u:libvirt-qemu:rwx",
-            &format!("/home/{username}"),
-        ],
-    ));
-    config_operation!(run(
-        "arch-chroot",
-        &[
-            "/mnt",
-            "flatpak",
-            "override",
-            "--filesystem=home",
-            "org.virt_manager.virt-manager",
-        ],
-    ));
-
     cancel_with_cleanup_if_requested(cancel_requested, &swap_part)?;
     report(&mut callback, 98, 0, 0, "Finalizing installation...");
     installation_operation!(finalize_target());
