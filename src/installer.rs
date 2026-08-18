@@ -1320,17 +1320,6 @@ pub fn install(
         "arch-chroot",
         &[
             "/mnt",
-            "sh",
-            "-c",
-            &format!(
-                "sed -i 's|^HomeUrl=/home/|HomeUrl=/home/{username}/|' /home/{username}/.config/dolphinrc && sed -i '/^HomeUrl=/a RememberOpenedTabs=false' /home/{username}/.config/dolphinrc"
-            ),
-        ],
-    ));
-    config_operation!(run(
-        "arch-chroot",
-        &[
-            "/mnt",
             "sed",
             "-i",
             "s/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/",
