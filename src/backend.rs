@@ -460,18 +460,31 @@ fn live_source_disks() -> HashSet<String> {
     let mut disks = HashSet::new();
     for source in sources {
         if let Ok(output) = Command::new("lsblk")
-            .args(["-s", "-n", "-o", "NAME,TYPE", &source])
+            // Raw KNAME output avoids the tree-drawing prefix that NAME adds
+            // to parent devices (for example, `└─sda`). Drive discovery uses
+            // the undecorated kernel name, so the live disk must use it too.
+            .args(["-s", "-n", "-r", "-o", "KNAME,TYPE", &source])
             .output()
         {
-            for line in String::from_utf8_lossy(&output.stdout).lines() {
-                let mut fields = line.split_whitespace();
-                if let (Some(name), Some("disk")) = (fields.next(), fields.next()) {
-                    disks.insert(name.to_string());
-                }
-            }
+            disks.extend(source_disk_names(&String::from_utf8_lossy(&output.stdout)));
         }
     }
     disks
+}
+
+fn source_disk_names(lsblk_output: &str) -> HashSet<String> {
+    lsblk_output
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.split_whitespace();
+            match (fields.next(), fields.next()) {
+                (Some(name), Some("disk")) => {
+                    Some(name.trim_start_matches(['├', '└', '─']).to_string())
+                }
+                _ => None,
+            }
+        })
+        .collect()
 }
 
 fn partition_summary(device: &str) -> String {
@@ -551,4 +564,18 @@ fn random_hostname() -> String {
         bytes[4] % 10,
         bytes[5] % 10
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::source_disk_names;
+
+    #[test]
+    fn live_source_disk_parser_normalizes_parent_disk_names() {
+        let disks = source_disk_names("sda1 part\n└─sda disk\n");
+
+        assert_eq!(disks.len(), 1);
+        assert!(disks.contains("sda"));
+        assert!(!disks.contains("sda1"));
+    }
 }
