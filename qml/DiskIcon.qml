@@ -69,14 +69,35 @@ Item {
     }
 
     // The USB artwork is embedded so it is identical on every live system.
-    Image {
+    Item {
         visible: root.mediaType === "usb" || root.mediaType === "usb_hdd"
         anchors.centerIn: parent
-        width: 46
-        height: 46
-        source: "qrc:/qt/qml/org/flufflinux/installer/assets/usb-storage.svg"
-        fillMode: Image.PreserveAspectFit
-        smooth: true
+        width: 48
+        height: 48
+
+        Image {
+            anchors.fill: parent
+            source: "qrc:/qt/qml/org/flufflinux/installer/assets/usb-storage.svg"
+            // Qt rasterizes SVG images before the design surface is scaled.
+            // A high-resolution source stays sharp on 4K and high-DPI output.
+            sourceSize.width: 512
+            sourceSize.height: 512
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
+        }
+
+        // Native text matches the SSD/MMC labels and remains crisp when Qt
+        // scales the interface, independent of SVG font support.
+        Label {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 3
+            text: "USB"
+            color: "white"
+            font.pixelSize: 9
+            font.weight: Font.Bold
+        }
     }
 
     Label {

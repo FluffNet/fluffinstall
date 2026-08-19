@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <path fill="#d2d2d2" d="M81 13h94v57H81z"/>
-  <path fill="#7f7f7f" d="M93 22h24v36H93zm47 0h24v36h-24z"/>
-  <path fill="#171314" d="M67 70h122v174H67z"/>
-  <path fill="#bd0000" d="M74 187h108v50H74z"/>
-  <text x="128" y="229" fill="#fff" font-family="sans-serif" font-size="38" text-anchor="middle">USB</text>
+  <path fill="#d2d2d2" d="M68 0h120v72H68z"/>
+  <path fill="#7f7f7f" d="M83 13h31v45H83zm59 0h31v45h-31z"/>
+  <path fill="#171314" d="M38 72h180v184H38z"/>
+  <path fill="#bd0000" d="M48 174h160v66H48z"/>
 </svg>
