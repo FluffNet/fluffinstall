@@ -4,10 +4,13 @@ use crate::installer;
 use cxx_qt::Threading;
 use cxx_qt_lib::QString;
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::process::Command;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
+
+static LIVE_SOURCE_SERIALS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 
 struct Drive {
     device: String,
@@ -341,8 +344,10 @@ fn discover_drives_data() -> String {
         }
     };
 
+    let lsblk_output = String::from_utf8_lossy(&output.stdout);
     let source_disks = live_source_disks();
-    let drives = String::from_utf8_lossy(&output.stdout)
+    let source_serials = remembered_live_source_serials(&lsblk_output, &source_disks);
+    let drives = lsblk_output
         .lines()
         .filter_map(|line| {
             if field(line, "TYPE") != "disk" {
@@ -352,12 +357,12 @@ fn discover_drives_data() -> String {
             if device.starts_with("zram") {
                 return None;
             }
-            if source_disks.contains(&device) {
+            let serial = field(line, "SERIAL");
+            if is_live_source(&device, &serial, &source_disks, &source_serials) {
                 return None;
             }
             let size_bytes = field(line, "SIZE").parse().unwrap_or(0);
             let model = field(line, "MODEL");
-            let serial = field(line, "SERIAL");
             let transport = field(line, "TRAN");
             let rotational = field(line, "ROTA");
             let removable = field(line, "RM") == "1";
@@ -487,6 +492,78 @@ fn source_disk_names(lsblk_output: &str) -> HashSet<String> {
         .collect()
 }
 
+fn remembered_live_source_serials(
+    lsblk_output: &str,
+    source_disks: &HashSet<String>,
+) -> HashSet<String> {
+    let serials =
+        LIVE_SOURCE_SERIALS.get_or_init(|| Mutex::new(load_remembered_live_source_serials()));
+    let mut serials = serials
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let previous_count = serials.len();
+    remember_live_source_serials(&mut serials, lsblk_output, source_disks);
+    if serials.len() != previous_count {
+        save_remembered_live_source_serials(&serials);
+    }
+    serials.clone()
+}
+
+fn live_source_serials_path() -> Option<PathBuf> {
+    std::env::var_os("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .map(|directory| directory.join("fluffinstall-live-source-serials"))
+}
+
+fn load_remembered_live_source_serials() -> HashSet<String> {
+    let Some(path) = live_source_serials_path() else {
+        return HashSet::new();
+    };
+    std::fs::read(path)
+        .unwrap_or_default()
+        .split(|byte| *byte == 0)
+        .filter(|serial| !serial.is_empty())
+        .map(|serial| String::from_utf8_lossy(serial).into_owned())
+        .collect()
+}
+
+fn save_remembered_live_source_serials(serials: &HashSet<String>) {
+    let Some(path) = live_source_serials_path() else {
+        return;
+    };
+    let mut contents = Vec::new();
+    for serial in serials {
+        contents.extend_from_slice(serial.as_bytes());
+        contents.push(0);
+    }
+    let _ = std::fs::write(path, contents);
+}
+
+fn remember_live_source_serials(
+    serials: &mut HashSet<String>,
+    lsblk_output: &str,
+    source_disks: &HashSet<String>,
+) {
+    for line in lsblk_output.lines() {
+        if field(line, "TYPE") != "disk" || !source_disks.contains(&field(line, "NAME")) {
+            continue;
+        }
+        let serial = field(line, "SERIAL");
+        if !serial.is_empty() {
+            serials.insert(serial);
+        }
+    }
+}
+
+fn is_live_source(
+    device: &str,
+    serial: &str,
+    source_disks: &HashSet<String>,
+    source_serials: &HashSet<String>,
+) -> bool {
+    source_disks.contains(device) || (!serial.is_empty() && source_serials.contains(serial))
+}
+
 fn partition_summary(device: &str) -> String {
     let target = format!("/dev/{device}");
     let output = match Command::new("lsblk")
@@ -568,7 +645,8 @@ fn random_hostname() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::source_disk_names;
+    use super::{is_live_source, remember_live_source_serials, source_disk_names};
+    use std::collections::HashSet;
 
     #[test]
     fn live_source_disk_parser_normalizes_parent_disk_names() {
@@ -577,5 +655,29 @@ mod tests {
         assert_eq!(disks.len(), 1);
         assert!(disks.contains("sda"));
         assert!(!disks.contains("sda1"));
+    }
+
+    #[test]
+    fn live_source_serial_stays_excluded_after_device_name_changes() {
+        let source_disks = HashSet::from(["sda".to_string()]);
+        let mut source_serials = HashSet::new();
+        remember_live_source_serials(
+            &mut source_serials,
+            r#"NAME="sda" SERIAL="LIVE-123" TYPE="disk""#,
+            &source_disks,
+        );
+
+        assert!(is_live_source(
+            "sdb",
+            "LIVE-123",
+            &HashSet::new(),
+            &source_serials,
+        ));
+        assert!(!is_live_source(
+            "sdc",
+            "OTHER-456",
+            &HashSet::new(),
+            &source_serials,
+        ));
     }
 }
