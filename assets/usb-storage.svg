@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <!-- Every detail is a vector path so rendering never depends on a font. -->
-  <path fill="#d2d2d2" d="M72 8h112v66H72z"/>
-  <path fill="#7f7f7f" d="M86 20h29v41H86zm55 0h29v41h-29z"/>
-  <path fill="#171314" d="M43 74h170v174H43z"/>
-  <path fill="#bd0000" d="M53 180h150v58H53z"/>
-  <g fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M71 193v21c0 9 5 14 14 14s14-5 14-14v-21"/>
-    <path d="M132 194h-13c-8 0-12 4-12 10 0 14 27 5 27 16 0 5-4 8-12 8h-14"/>
-    <path d="M146 193v35h15c9 0 14-4 14-10 0-5-5-9-12-9 6 0 10-3 10-8 0-5-4-8-13-8zm0 16h17"/>
-  </g>
+  <path fill="#d2d2d2" d="M68 0h120v72H68z"/>
+  <path fill="#7f7f7f" d="M83 13h31v45H83zm59 0h31v45h-31z"/>
+  <path fill="#171314" d="M38 72h180v184H38z"/>
+  <path fill="#bd0000" d="M48 174h160v66H48z"/>
 </svg>
