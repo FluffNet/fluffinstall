@@ -75,8 +75,14 @@ Item {
         width: 46
         height: 46
         source: "qrc:/qt/qml/org/flufflinux/installer/assets/usb-storage.svg"
+        // Qt rasterizes SVG images before the design surface is scaled. Keep
+        // a high-resolution source texture so 4K and high-DPI output stays
+        // sharp while PreserveAspectFit prevents aspect-ratio distortion.
+        sourceSize.width: 512
+        sourceSize.height: 512
         fillMode: Image.PreserveAspectFit
         smooth: true
+        mipmap: true
     }
 
     Label {
