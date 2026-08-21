@@ -41,6 +41,14 @@ ApplicationWindow {
         palette.highlightedText: enabled ? "#202020" : "#777777"
         icon.color: enabled ? "#202020" : "#777777"
 
+        Keys.onPressed: function(event) {
+            if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter)
+                return
+            event.accepted = true
+            if (installerButton.enabled && !event.isAutoRepeat)
+                installerButton.clicked()
+        }
+
         background: Rectangle {
             implicitWidth: 80
             implicitHeight: 44
