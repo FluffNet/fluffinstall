@@ -856,7 +856,7 @@ fn set_password(username: &str, password: &str) -> Result<(), String> {
     }
 }
 
-const NON_LOCALE_CONFIGURATION_OPERATIONS: usize = 60;
+const NON_LOCALE_CONFIGURATION_OPERATIONS: usize = 61;
 
 struct ConfigurationProgress {
     completed: usize,
@@ -1340,6 +1340,10 @@ pub fn install(
         ],
     ));
     config_operation!(set_password(username, "fluff"));
+    config_operation!(run(
+        "arch-chroot",
+        &["/mnt", "systemctl", "mask", "systemd-firstboot.service"],
+    ));
     config_operation!(run(
         "arch-chroot",
         &["/mnt", "systemctl", "enable", "plasmalogin.service"],
