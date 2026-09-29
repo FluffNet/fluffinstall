@@ -10,13 +10,12 @@ ApplicationWindow {
     height: 600
     minimumWidth: 920
     minimumHeight: 600
-    maximumWidth: 920
-    maximumHeight: 600
     flags: Qt.Window
            | Qt.CustomizeWindowHint
            | Qt.WindowTitleHint
            | Qt.WindowSystemMenuHint
            | Qt.WindowMinimizeButtonHint
+           | Qt.WindowMaximizeButtonHint
            | Qt.WindowCloseButtonHint
     visible: true
     title: "Fluff Linux Installer"
