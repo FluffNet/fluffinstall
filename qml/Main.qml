@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import org.kde.kirigami as Kirigami
 import org.flufflinux.installer
 
 ApplicationWindow {
@@ -233,6 +234,25 @@ ApplicationWindow {
         }
         if (selectedDrive < 0 && parsed.length === 1 && parsed[0].eligible)
             selectedDrive = 0
+    }
+
+    function selectAdjacentDrive(direction) {
+        if (page !== 1 || drives.length === 0 || direction === 0)
+            return
+
+        let index = selectedDrive
+        if (index < 0)
+            index = direction > 0 ? -1 : drives.length
+
+        for (index += direction;
+             index >= 0 && index < drives.length;
+             index += direction) {
+            if (!drives[index].eligible)
+                continue
+            selectedDrive = index
+            driveList.positionViewAtIndex(index, ListView.Contain)
+            return
+        }
     }
 
     function progressInstallationStep() {
@@ -468,7 +488,7 @@ ApplicationWindow {
                 anchors.bottom: parent.bottom
                 anchors.rightMargin: 22
                 anchors.bottomMargin: 16
-                text: "fluffinstall 1.0"
+                text: "fluffinstall 1.1"
                 color: "#202020"
                 font.pixelSize: 11
             }
@@ -477,6 +497,21 @@ ApplicationWindow {
         // Disk selection
         Item {
             id: driveSelectionPage
+
+            Shortcut {
+                sequence: "Up"
+                enabled: driveSelectionPage.visible
+                context: Qt.WindowShortcut
+                onActivated: window.selectAdjacentDrive(-1)
+            }
+
+            Shortcut {
+                sequence: "Down"
+                enabled: driveSelectionPage.visible
+                context: Qt.WindowShortcut
+                onActivated: window.selectAdjacentDrive(1)
+            }
+
             onVisibleChanged: {
                 if (visible)
                     Qt.callLater(function() {
@@ -495,8 +530,12 @@ ApplicationWindow {
                     if (!driveSelectionPage.visible)
                         return
                     Qt.callLater(function() {
-                        if (driveSelectionPage.visible && window.selectedDrive >= 0)
+                        if (!driveSelectionPage.visible)
+                            return
+                        if (window.selectedDrive >= 0)
                             driveNextButton.forceActiveFocus(Qt.TabFocusReason)
+                        else
+                            driveBackButton.forceActiveFocus(Qt.TabFocusReason)
                     })
                 }
             }
@@ -538,6 +577,12 @@ ApplicationWindow {
                     model: window.drives
                     ScrollBar.vertical: ScrollBar {
                         policy: ScrollBar.AsNeeded
+                    }
+
+                    Kirigami.WheelHandler {
+                        target: driveList
+                        blockTargetWheel: true
+                        scrollFlickableTarget: true
                     }
 
                     header: RowLayout {
