@@ -374,6 +374,19 @@ ApplicationWindow {
     }
 
     Timer {
+        interval: 250
+        repeat: true
+        running: true
+        onTriggered: {
+            if (!backend.takeActivationRequest())
+                return
+            window.showNormal()
+            window.raise()
+            window.requestActivate()
+        }
+    }
+
+    Timer {
         interval: 2000
         repeat: true
         running: window.page === 1 && !backend.installing
@@ -411,6 +424,23 @@ ApplicationWindow {
         // Welcome
         Item {
             id: welcomePage
+
+            Shortcut {
+                sequence: "Return"
+                enabled: welcomePage.visible
+                context: Qt.WindowShortcut
+                autoRepeat: false
+                onActivated: window.showPage(1)
+            }
+
+            Shortcut {
+                sequence: "Enter"
+                enabled: welcomePage.visible
+                context: Qt.WindowShortcut
+                autoRepeat: false
+                onActivated: window.showPage(1)
+            }
+
             onVisibleChanged: {
                 if (visible)
                     Qt.callLater(function() {
