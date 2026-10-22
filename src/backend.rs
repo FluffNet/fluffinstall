@@ -1,6 +1,6 @@
 //! Connects the QML interface to drive discovery and installation work.
 
-use crate::installer;
+use crate::{installer, single_instance};
 use cxx_qt::Threading;
 use cxx_qt_lib::QString;
 use std::collections::HashSet;
@@ -58,6 +58,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "installationPowerWarning"]
         fn installation_power_warning(&self) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "takeActivationRequest"]
+        fn take_activation_request(&self) -> bool;
 
         #[qinvokable]
         #[cxx_name = "startInstallation"]
@@ -124,6 +128,10 @@ impl qobject::InstallerBackend {
 
     pub fn installation_power_warning(&self) -> QString {
         QString::from(&power_warning())
+    }
+
+    pub fn take_activation_request(&self) -> bool {
+        single_instance::take_activation_request()
     }
 
     pub fn start_installation(mut self: Pin<&mut Self>, target_disk: &QString, hostname: &QString) {
