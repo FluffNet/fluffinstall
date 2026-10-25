@@ -7,7 +7,11 @@ fn main() {
                 .qml_file("qml/Main.qml")
                 .qml_file("qml/DiskIcon.qml"),
         )
-        .qrc_resources(["assets/usb-storage.svg"])
+        .qrc_resources([
+            "assets/usb-storage.svg",
+            "assets/drive-harddisk.svg",
+            "assets/dialog-error.svg",
+        ])
         .cc_builder(|compiler| {
             // GCC 16 can emit this warning while parsing Qt 6 QChar headers.
             // All other compiler warnings remain visible.
