@@ -598,10 +598,13 @@ ApplicationWindow {
                     Layout.fillWidth: true
                 }
 
-                ListView {
-                    id: driveList
+                Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+
+                    ListView {
+                    id: driveList
+                    anchors.fill: parent
                     clip: true
                     spacing: 8
                     model: window.drives
@@ -745,6 +748,55 @@ ApplicationWindow {
                                 Layout.preferredWidth: 116
                                 horizontalAlignment: Text.AlignHCenter
                             }
+                        }
+                    }
+                    }
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: driveList.headerItem
+                                                      ? driveList.headerItem.height / 2
+                                                      : 15
+                        spacing: 12
+                        visible: window.drives.length === 0
+                                 && diskError.text.length === 0
+
+                        Item {
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.preferredWidth: 76
+                            Layout.preferredHeight: 72
+
+                            Image {
+                                anchors.fill: parent
+                                source: "qrc:/qt/qml/org/flufflinux/installer/assets/drive-harddisk.svg"
+                                sourceSize.width: 256
+                                sourceSize.height: 256
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                mipmap: true
+                                opacity: 0.72
+                            }
+
+                            Image {
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                width: 32
+                                height: 32
+                                source: "qrc:/qt/qml/org/flufflinux/installer/assets/dialog-error.svg"
+                                sourceSize.width: 128
+                                sourceSize.height: 128
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                mipmap: true
+                            }
+                        }
+
+                        Label {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "No Drives were found"
+                            font.pixelSize: 18
+                            font.weight: Font.DemiBold
+                            color: "#5c6673"
                         }
                     }
                 }
