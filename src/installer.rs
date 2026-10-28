@@ -1178,14 +1178,14 @@ pub fn install(
     config_operation!(run(
         "cp",
         &[
-            "/usr/lib/fluffinstall/plasmalogin-etc/flufflinux.conf",
+            "/usr/lib/fluffinstall/flufflinuxlogin-etc/flufflinux.conf",
             "/mnt/etc/FLLM",
         ],
     ));
     config_operation!(run(
         "cp",
         &[
-            "/usr/lib/fluffinstall/plasmalogin-etc/plasmalogin.conf",
+            "/usr/lib/fluffinstall/flufflinuxlogin-etc/FLLM.conf",
             "/mnt/etc/FLLM.conf",
         ],
     ));
@@ -1218,7 +1218,7 @@ pub fn install(
         "cp",
         &[
             "-r",
-            "/usr/lib/fluffinstall/plasmalogin/.",
+            "/usr/lib/fluffinstall/flufflinuxlogin/.",
             "/mnt/var/lib/FLLM/",
         ],
     ));
