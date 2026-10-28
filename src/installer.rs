@@ -1174,19 +1174,19 @@ pub fn install(
             "/mnt/etc/fonts/conf.d/",
         ],
     ));
-    config_operation!(run("mkdir", &["-p", "/mnt/etc/plasmalogin.conf.d"]));
+    config_operation!(run("mkdir", &["-p", "/mnt/etc/FLLM"]));
     config_operation!(run(
         "cp",
         &[
             "/usr/lib/fluffinstall/plasmalogin-etc/flufflinux.conf",
-            "/mnt/etc/plasmalogin.conf.d",
+            "/mnt/etc/FLLM",
         ],
     ));
     config_operation!(run(
         "cp",
         &[
             "/usr/lib/fluffinstall/plasmalogin-etc/plasmalogin.conf",
-            "/mnt/etc/",
+            "/mnt/etc/FLLM.conf",
         ],
     ));
     config_operation!(run(
@@ -1213,9 +1213,14 @@ pub fn install(
             "/mnt/usr/bin/fluffsetup",
         ],
     ));
+    config_operation!(run("mkdir", &["-p", "/mnt/var/lib/FLLM"]));
     config_operation!(run(
         "cp",
-        &["-r", "/usr/lib/fluffinstall/plasmalogin", "/mnt/var/lib/"],
+        &[
+            "-r",
+            "/usr/lib/fluffinstall/plasmalogin/.",
+            "/mnt/var/lib/FLLM/",
+        ],
     ));
     config_operation!(run(
         "arch-chroot",
@@ -1223,8 +1228,8 @@ pub fn install(
             "/mnt",
             "chown",
             "-R",
-            "plasmalogin:plasmalogin",
-            "/var/lib/plasmalogin",
+            "flufflinuxlogin:flufflinuxlogin",
+            "/var/lib/FLLM",
         ],
     ));
     config_operation!(run(
@@ -1346,7 +1351,7 @@ pub fn install(
     ));
     config_operation!(run(
         "arch-chroot",
-        &["/mnt", "systemctl", "enable", "plasmalogin.service"],
+        &["/mnt", "systemctl", "enable", "fllm.service"],
     ));
     config_operation!(run(
         "arch-chroot",
