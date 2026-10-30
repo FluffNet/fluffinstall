@@ -856,7 +856,7 @@ fn set_password(username: &str, password: &str) -> Result<(), String> {
     }
 }
 
-const NON_LOCALE_CONFIGURATION_OPERATIONS: usize = 61;
+const NON_LOCALE_CONFIGURATION_OPERATIONS: usize = 62;
 
 struct ConfigurationProgress {
     completed: usize,
@@ -1162,6 +1162,13 @@ pub fn install(
         &["/etc/pacman.d/mirrorlist", "/mnt/etc/pacman.d/mirrorlist"],
     ));
     config_operation!(run("cp", &["/etc/locale.conf", "/mnt/etc/"]));
+    config_operation!(run(
+        "cp",
+        &[
+            "/etc/security/faillock.conf",
+            "/mnt/etc/security/faillock.conf",
+        ],
+    ));
     installation_operation!(enable_all_utf8_locales(
         &mut callback,
         &mut configuration_progress,
