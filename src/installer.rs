@@ -202,7 +202,7 @@ fn command_output(command: &str, args: &[&str]) -> std::io::Result<std::process:
 fn generic_command_error(command: &str) -> String {
     if matches!(
         command,
-        "wipefs" | "parted" | "mkfs.fat" | "mkswap" | "mkfs.btrfs" | "mount" | "swapon"
+        "wipefs" | "parted" | "mkfs.fat" | "mkfs.btrfs" | "btrfs" | "mount" | "swapon"
     ) {
         format!("Failed to format drive - {command} failed.")
     } else {
@@ -348,7 +348,7 @@ fn reinforce_root_labels(target_disk: &str, root_part: &str) {
     if field(&line, "PARTLABEL") != "Fluff Linux" {
         let _ = run(
             "parted",
-            &["--script", target_disk, "name", "3", "\"Fluff Linux\""],
+            &["--script", target_disk, "name", "2", "\"Fluff Linux\""],
         );
     }
     if field(&line, "LABEL") != "Fluff Linux" {
@@ -856,7 +856,7 @@ fn set_password(username: &str, password: &str) -> Result<(), String> {
     }
 }
 
-const NON_LOCALE_CONFIGURATION_OPERATIONS: usize = 62;
+const NON_LOCALE_CONFIGURATION_OPERATIONS: usize = 63;
 
 struct ConfigurationProgress {
     completed: usize,
@@ -956,11 +956,11 @@ fn cancel_and_unmount_target() {
 
 fn cancel_with_cleanup_if_requested(
     cancel_requested: &AtomicBool,
-    swap_part: &str,
+    swap_file: &str,
 ) -> Result<(), String> {
     if cancel_requested.load(Ordering::Relaxed) {
         stop_tracking_for_cleanup();
-        let _ = run_cleanup("swapoff", &[swap_part]);
+        let _ = run_cleanup("swapoff", &[swap_file]);
         cancel_and_unmount_target();
         INSTALLATION_CANCEL_REQUESTED.store(false, Ordering::Release);
         Err(CANCELLED_MESSAGE.to_string())
@@ -981,8 +981,8 @@ pub fn install(
         ""
     };
     let boot_part = format!("{target_disk}{part_suffix}1");
-    let swap_part = format!("{target_disk}{part_suffix}2");
-    let root_part = format!("{target_disk}{part_suffix}3");
+    let root_part = format!("{target_disk}{part_suffix}2");
+    let swap_file = "/mnt/swap/swapfile";
     begin_cancellable_installation(cancel_requested.load(Ordering::Acquire));
 
     // Before formatting, failures can return directly because the selected
@@ -1008,8 +1008,9 @@ pub fn install(
         }};
     }
 
-    // Once drive work begins, every exit path disables swap and unmounts the
-    // target. Cancellation uses forced cleanup while other failures sync first.
+    // Once drive work begins, every exit path disables the target swapfile and
+    // unmounts the target. Cancellation uses forced cleanup while other failures
+    // sync first.
     macro_rules! installation_operation {
         ($operation:expr) => {{
             let operation_result = $operation;
@@ -1019,7 +1020,7 @@ pub fn install(
                     .is_err_and(|error| error == CANCELLED_MESSAGE)
             {
                 stop_tracking_for_cleanup();
-                let _ = run_cleanup("swapoff", &[&swap_part]);
+                let _ = run_cleanup("swapoff", &[swap_file]);
                 cancel_and_unmount_target();
                 INSTALLATION_CANCEL_REQUESTED.store(false, Ordering::Release);
                 return Err(CANCELLED_MESSAGE.to_string());
@@ -1028,7 +1029,7 @@ pub fn install(
                 Ok(value) => value,
                 Err(error) => {
                     stop_tracking_for_cleanup();
-                    let _ = run_cleanup("swapoff", &[&swap_part]);
+                    let _ = run_cleanup("swapoff", &[swap_file]);
                     sync_and_unmount_target();
                     INSTALLATION_CANCEL_REQUESTED.store(false, Ordering::Release);
                     return Err(error);
@@ -1057,7 +1058,9 @@ pub fn install(
         }
     }));
 
-    // Formatting and partitioning copied in the same order from FluffInstall 0.9.
+    // Keep swap inside the Btrfs filesystem so it can be resized without
+    // repartitioning the drive. The separate subvolume also keeps it out of
+    // future root snapshots.
     installation_operation!(format_drive("wipefs", &["--all", target_disk]));
     installation_operation!(format_drive(
         "parted",
@@ -1090,38 +1093,20 @@ pub fn install(
             target_disk,
             "mkpart",
             "primary",
-            "linux-swap",
-            "1GiB",
-            "5GiB",
-        ],
-    ));
-    installation_operation!(format_drive(
-        "parted",
-        &["--script", target_disk, "name", "2", "SWAP"]
-    ));
-    installation_operation!(format_drive(
-        "parted",
-        &[
-            "--script",
-            target_disk,
-            "mkpart",
-            "primary",
             "btrfs",
-            "5GiB",
+            "1GiB",
             "100%",
         ],
     ));
     installation_operation!(format_drive(
         "parted",
-        &["--script", target_disk, "name", "3", "\"Fluff Linux\""],
+        &["--script", target_disk, "name", "2", "\"Fluff Linux\""],
     ));
 
     installation_operation!(format_drive("wipefs", &["-a", &boot_part]));
-    installation_operation!(format_drive("wipefs", &["-a", &swap_part]));
     installation_operation!(format_drive("wipefs", &["-a", &root_part]));
     report(&mut callback, 14, 0, 0, "Formatting drive...");
     installation_operation!(format_drive("mkfs.fat", &["-F32", "-n", "EFI", &boot_part]));
-    installation_operation!(format_drive("mkswap", &["-L", "SWAP", &swap_part]));
     installation_operation!(format_drive(
         "mkfs.btrfs",
         &["-f", "-L", "Fluff Linux", &root_part]
@@ -1131,12 +1116,17 @@ pub fn install(
         "mount",
         &["-o", "compress=zstd,noatime", &root_part, "/mnt"],
     ));
+    installation_operation!(format_drive("btrfs", &["subvolume", "create", "/mnt/swap"],));
+    installation_operation!(format_drive(
+        "btrfs",
+        &["filesystem", "mkswapfile", "--size", "4G", swap_file,],
+    ));
     installation_operation!(format_drive("mount", &["--mkdir", &boot_part, "/mnt/boot"]));
-    installation_operation!(format_drive("swapon", &[&swap_part]));
+    installation_operation!(format_drive("swapon", &[swap_file]));
 
     report(&mut callback, 24, 0, 0, "Installing system files...");
     installation_operation!(install_packages(&mut callback, cancel_requested));
-    cancel_with_cleanup_if_requested(cancel_requested, &swap_part)?;
+    cancel_with_cleanup_if_requested(cancel_requested, swap_file)?;
 
     let mut configuration_progress = ConfigurationProgress {
         completed: 0,
@@ -1276,11 +1266,20 @@ pub fn install(
 
     config_operation!(run("sh", &["-c", "genfstab -U /mnt >> /mnt/etc/fstab"]));
     config_operation!(run(
+        "arch-chroot",
+        &[
+            "/mnt",
+            "sh",
+            "-c",
+            "grep -qF '/swap/swapfile' /etc/fstab || printf '%s\\n' '/swap/swapfile none swap defaults 0 0' >> /etc/fstab",
+        ],
+    ));
+    config_operation!(run(
         "sh",
         &["-c", "arch-chroot /mnt fc-cache -fv 2>/dev/null"]
     ));
 
-    cancel_with_cleanup_if_requested(cancel_requested, &swap_part)?;
+    cancel_with_cleanup_if_requested(cancel_requested, swap_file)?;
     config_operation!(run_bootloader(
         "arch-chroot",
         &[
@@ -1305,7 +1304,7 @@ pub fn install(
         &["/mnt", "grub-mkconfig", "-o", "/boot/grub/grub.cfg"],
     ));
 
-    cancel_with_cleanup_if_requested(cancel_requested, &swap_part)?;
+    cancel_with_cleanup_if_requested(cancel_requested, swap_file)?;
     config_operation!(run(
         "sh",
         &["-c", &format!("echo \"{hostname}\" > /mnt/etc/hostname")],
@@ -1433,10 +1432,11 @@ pub fn install(
         "arch-chroot",
         &["/mnt", "systemctl", "enable", "virtsecretd"],
     ));
-    cancel_with_cleanup_if_requested(cancel_requested, &swap_part)?;
+    cancel_with_cleanup_if_requested(cancel_requested, swap_file)?;
+    installation_operation!(run("swapoff", &[swap_file]));
     report(&mut callback, 98, 0, 0, "Finalizing installation...");
     installation_operation!(finalize_target());
-    cancel_with_cleanup_if_requested(cancel_requested, &swap_part)?;
+    cancel_with_cleanup_if_requested(cancel_requested, swap_file)?;
     finish_cancellable_installation();
     report(&mut callback, 100, 0, 0, "Installation complete");
     Ok(())
