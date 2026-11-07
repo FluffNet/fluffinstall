@@ -518,7 +518,7 @@ ApplicationWindow {
                 anchors.bottom: parent.bottom
                 anchors.rightMargin: 22
                 anchors.bottomMargin: 16
-                text: "fluffinstall 1.1"
+                text: "fluffinstall 1.5"
                 color: "#202020"
                 font.pixelSize: 11
             }
