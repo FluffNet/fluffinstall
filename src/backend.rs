@@ -62,6 +62,10 @@ pub mod qobject {
         fn installation_power_warning(&self) -> QString;
 
         #[qinvokable]
+        #[cxx_name = "hasNetworkConnection"]
+        fn has_network_connection(&self) -> bool;
+
+        #[qinvokable]
         #[cxx_name = "takeActivationRequest"]
         fn take_activation_request(&self) -> bool;
 
@@ -135,6 +139,10 @@ impl qobject::InstallerBackend {
 
     pub fn installation_power_warning(&self) -> QString {
         QString::from(&power_warning())
+    }
+
+    pub fn has_network_connection(&self) -> bool {
+        network_manager_has_connection()
     }
 
     pub fn take_activation_request(&self) -> bool {
@@ -244,6 +252,26 @@ impl qobject::InstallerBackend {
     pub fn shutdown_system(&self) {
         let _ = Command::new("sudo").args(["shutdown", "now"]).spawn();
     }
+}
+
+fn network_manager_has_connection() -> bool {
+    let Ok(output) = Command::new("/usr/bin/nmcli")
+        .args(["-t", "-f", "STATE", "device", "status"])
+        .env("LC_ALL", "C")
+        .output()
+    else {
+        return false;
+    };
+
+    output.status.success()
+        && network_state_has_connection(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn network_state_has_connection(states: &str) -> bool {
+    states.lines().any(|state| {
+        let state = state.trim();
+        state == "connected" || state.starts_with("connected (")
+    })
 }
 
 fn power_warning() -> String {
@@ -675,7 +703,10 @@ fn random_hostname() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_live_source, remember_live_source_serials, source_disk_names};
+    use super::{
+        is_live_source, network_state_has_connection, remember_live_source_serials,
+        source_disk_names,
+    };
     use std::collections::HashSet;
 
     #[test]
@@ -708,6 +739,17 @@ mod tests {
             "OTHER-456",
             &HashSet::new(),
             &source_serials,
+        ));
+    }
+
+    #[test]
+    fn network_connection_requires_a_connected_device() {
+        assert!(network_state_has_connection(
+            "connected\ndisconnected\nunavailable\n"
+        ));
+        assert!(network_state_has_connection("connected (externally)\n"));
+        assert!(!network_state_has_connection(
+            "disconnected\nunavailable\nunmanaged\n"
         ));
     }
 }
