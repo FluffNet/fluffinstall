@@ -28,6 +28,18 @@ ApplicationWindow {
     property string generatedHostname: ""
     property string lastDriveData: ""
     property string powerWarning: ""
+    property bool installUpdatesRequested: true
+    readonly property bool updatingSystem:
+        backend.statusMessage.startsWith("Updating system")
+    readonly property var updateEvent: {
+        if (backend.updateEventJson.length === 0)
+            return ({})
+        try {
+            return JSON.parse(backend.updateEventJson)
+        } catch (error) {
+            return ({})
+        }
+    }
 
     // One shared button style keeps every installer action the same size and
     // contrast while still showing keyboard focus clearly.
@@ -264,11 +276,13 @@ ApplicationWindow {
             return 2
         if (backend.overallProgress < 78)
             return 3
-        if (backend.overallProgress < 98)
+        if (backend.overallProgress < 95)
             return 4
-        if (backend.overallProgress < 100)
+        if (backend.overallProgress < 98)
             return 5
-        return 6
+        if (backend.overallProgress < 100)
+            return 6
+        return 7
     }
 
     function failedInstallationStep() {
@@ -287,7 +301,9 @@ ApplicationWindow {
         if (error.includes("failed to configure")
                 || error.includes("bootloader"))
             return 4
-        return Math.min(progressInstallationStep(), 5)
+        if (error.includes("failed to update installed system"))
+            return 5
+        return Math.min(progressInstallationStep(), 6)
     }
 
     function activeInstallationStep() {
@@ -307,8 +323,10 @@ ApplicationWindow {
             return backend.overallProgress < 35 ? 1 : 3
         if (status.startsWith("Configuring system"))
             return 4
-        if (status.startsWith("Finalizing"))
+        if (status.startsWith("Updating system"))
             return 5
+        if (status.startsWith("Finalizing"))
+            return 6
         return progressInstallationStep()
     }
 
@@ -358,7 +376,8 @@ ApplicationWindow {
     }
 
     function showCancellationDialog() {
-        if (window.page !== 3 || !backend.installing || backend.cancelling)
+        if (window.page !== 3 || !backend.installing || backend.cancelling
+                || !backend.cancellationAllowed)
             return
 
         cancelWindow.show()
@@ -369,7 +388,8 @@ ApplicationWindow {
     onClosing: function(close) {
         if (window.page === 3 && backend.installing) {
             close.accepted = false
-            window.showCancellationDialog()
+            if (backend.cancellationAllowed)
+                window.showCancellationDialog()
         }
     }
 
@@ -960,9 +980,9 @@ ApplicationWindow {
                         CheckBox {
                             id: updatesOption
                             anchors.fill: parent
-                            text: "Download and install updates after installation has finished"
-                            checked: false
-                            enabled: false
+                            text: "Download and install system updates"
+                            checked: true
+                            enabled: true
 
                             indicator: Rectangle {
                                 implicitWidth: 20
@@ -971,7 +991,7 @@ ApplicationWindow {
                                 y: (updatesOption.height - height) / 2
                                 radius: 2
                                 border.width: 1
-                                border.color: "#9a9a9a"
+                                border.color: updatesOption.activeFocus ? "#820101" : "#777777"
 
                                 gradient: Gradient {
                                     GradientStop { position: 0; color: "#eeeeee" }
@@ -982,7 +1002,7 @@ ApplicationWindow {
                                     anchors.centerIn: parent
                                     visible: updatesOption.checked
                                     text: "✓"
-                                    color: "#555555"
+                                    color: "#202020"
                                     font.pixelSize: 14
                                     font.weight: Font.DemiBold
                                 }
@@ -992,7 +1012,7 @@ ApplicationWindow {
                                 leftPadding: updatesOption.indicator.width + updatesOption.spacing
                                 text: updatesOption.text
                                 font: updatesOption.font
-                                color: "#777777"
+                                color: "#202020"
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
                             }
@@ -1006,7 +1026,7 @@ ApplicationWindow {
                         }
 
                         ToolTip.visible: updatesOptionHover.containsMouse
-                        ToolTip.text: "System updates will be available in a future version of FluffInstall."
+                        ToolTip.text: "Updates are installed before FluffInstall finalizes the installation."
                     }
 
                     Item { Layout.fillWidth: true }
@@ -1143,10 +1163,12 @@ ApplicationWindow {
                                 window.refreshPowerStatus()
                                 if (window.powerWarning.length > 0)
                                     return
+                                window.installUpdatesRequested = updatesOption.checked
                                 window.showPage(3)
                                 backend.startInstallation(
                                     "/dev/" + drives[selectedDrive].device,
-                                    generatedHostname
+                                    generatedHostname,
+                                    window.installUpdatesRequested
                                 )
                             }
                         }
@@ -1276,7 +1298,8 @@ ApplicationWindow {
                             Layout.preferredWidth: 120
                             onClicked: {
                                 if (!cancelWindow.visible || window.page !== 3
-                                        || !backend.installing)
+                                        || !backend.installing
+                                        || !backend.cancellationAllowed)
                                     return
                                 cancelWindow.close()
                                 backend.cancelInstallation()
@@ -1300,6 +1323,10 @@ ApplicationWindow {
                 target: backend
                 function onInstallingChanged() {
                     if (!backend.installing && cancelWindow.visible)
+                        cancelWindow.close()
+                }
+                function onCancellationAllowedChanged() {
+                    if (!backend.cancellationAllowed && cancelWindow.visible)
                         cancelWindow.close()
                 }
                 function onErrorMessageChanged() {
@@ -1342,10 +1369,13 @@ ApplicationWindow {
 
                 Item {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: stageColumns.implicitHeight
+                    Layout.preferredHeight: window.updatingSystem
+                                          ? Math.max(190, fluUpdateLoader.implicitHeight)
+                                          : stageColumns.implicitHeight
 
                     RowLayout {
                         id: stageColumns
+                        visible: !window.updatingSystem
                         width: 536
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.horizontalCenterOffset: 36
@@ -1397,11 +1427,49 @@ ApplicationWindow {
                             }
                             InstallationStep {
                                 step: 5
+                                waitingText: "Update system"
+                                activeText: "Updating system..."
+                                completedText: window.installUpdatesRequested
+                                               ? "Updated system"
+                                               : "Skipped system updates"
+                            }
+                            InstallationStep {
+                                step: 6
                                 waitingText: "Finalize installation"
                                 activeText: "Finalizing installation..."
                                 completedText: "Finalized installation"
                             }
                         }
+                    }
+
+                    Loader {
+                        id: fluUpdateLoader
+                        visible: window.updatingSystem
+                        active: visible
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 560
+                        source: "file:///usr/share/flufflinux-update/installer/InstallerPage.qml"
+
+                        onLoaded: {
+                            if (item)
+                                item.event = Qt.binding(function() {
+                                    return window.updateEvent
+                                })
+                        }
+                    }
+
+                    Label {
+                        visible: window.updatingSystem
+                                 && fluUpdateLoader.status === Loader.Error
+                        anchors.centerIn: parent
+                        width: 520
+                        text: backend.detailMessage.length > 0
+                              ? backend.detailMessage
+                              : "Updating the installed system..."
+                        color: "#65758b"
+                        font.pixelSize: 15
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
                     }
                 }
 
