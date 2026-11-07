@@ -1,7 +1,7 @@
 //! Performs the installation and reports each visible stage to the interface.
 
 use std::fs;
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -14,6 +14,8 @@ const FLUFFSETUP_SUDOERS_PATH: &str = "/etc/sudoers.d/90-fluffsetup-temporary";
 const FLUFFSETUP_DESKTOP_SOURCE: &str = "/usr/lib/fluffinstall/fluffsetup/fluffsetup.desktop";
 const FLUFFSETUP_SESSION_SOURCE: &str = "/usr/lib/fluffinstall/fluffsetup/fluffsetup-session";
 const FLUFFSETUP_BINARY_SOURCE: &str = "/usr/lib/fluffinstall/fluffsetup/fluffsetup";
+const FLU_WORKER_PATH: &str = "/usr/lib/flufflinux-update/flufflinux-update-worker";
+const FLU_INSTALLER_PAGE_PATH: &str = "/usr/share/flufflinux-update/installer/InstallerPage.qml";
 
 #[derive(Clone, Debug)]
 pub struct Progress {
@@ -22,6 +24,8 @@ pub struct Progress {
     pub total: i32,
     pub status: String,
     pub detail: String,
+    pub update_event_json: String,
+    pub cancellation_allowed: bool,
 }
 
 fn report(
@@ -37,6 +41,8 @@ fn report(
         total,
         status: status.to_string(),
         detail: String::new(),
+        update_event_json: String::new(),
+        cancellation_allowed: true,
     });
 }
 
@@ -54,6 +60,25 @@ fn report_with_detail(
         total,
         status: status.to_string(),
         detail: detail.to_string(),
+        update_event_json: String::new(),
+        cancellation_allowed: true,
+    });
+}
+
+fn report_update(
+    callback: &mut impl FnMut(Progress),
+    progress: i32,
+    detail: &str,
+    event_json: &str,
+) {
+    callback(Progress {
+        overall: 95 + progress.clamp(0, 100) * 3 / 100,
+        completed: progress.clamp(0, 100),
+        total: 100,
+        status: "Updating system...".to_string(),
+        detail: detail.to_string(),
+        update_event_json: event_json.to_string(),
+        cancellation_allowed: false,
     });
 }
 
@@ -90,6 +115,23 @@ fn validate_fluffsetup_session_files() -> Result<(), String> {
             missing_files.join(", ")
         );
         Err("Installation files are missing, the drive was not formatted.".to_string())
+    }
+}
+
+fn validate_system_update_files() -> Result<(), String> {
+    let missing_files = [FLU_WORKER_PATH, FLU_INSTALLER_PAGE_PATH]
+        .into_iter()
+        .filter(|path| !fs::metadata(path).is_ok_and(|metadata| metadata.is_file()))
+        .collect::<Vec<_>>();
+
+    if missing_files.is_empty() {
+        Ok(())
+    } else {
+        eprintln!(
+            "Missing system update integration files: {}",
+            missing_files.join(", ")
+        );
+        Err("System update files are missing, the drive was not formatted.".to_string())
     }
 }
 
@@ -831,6 +873,188 @@ fn install_packages(
     Ok(())
 }
 
+#[derive(Default)]
+struct UpdateProtocolState {
+    final_code: Option<i64>,
+    protocol_error: Option<String>,
+    failure_message: Option<String>,
+}
+
+fn update_progress_detail(event: &serde_json::Value) -> String {
+    let state = &event["state"];
+    let display = &event["display"];
+    match state["phase"].as_str().unwrap_or("starting") {
+        "downloading" => format!(
+            "{} / {} downloaded",
+            display["downloadedSize"].as_str().unwrap_or("0 B"),
+            display["totalDownloadSize"].as_str().unwrap_or("0 B")
+        ),
+        "installing" => format!(
+            "{} / {} updates installed",
+            state["completed_packages"].as_u64().unwrap_or(0),
+            state["total_packages"].as_u64().unwrap_or(0)
+        ),
+        "complete" => "System is up to date".to_string(),
+        "failed" => display["errorMessage"]
+            .as_str()
+            .unwrap_or("The system update failed.")
+            .to_string(),
+        _ => "Preparing system updates...".to_string(),
+    }
+}
+
+fn handle_update_protocol_line(
+    line: &str,
+    state: &mut UpdateProtocolState,
+    callback: &mut impl FnMut(Progress),
+) {
+    let event = match serde_json::from_str::<serde_json::Value>(line) {
+        Ok(event) => event,
+        Err(error) => {
+            state.protocol_error = Some(format!("invalid progress data: {error}"));
+            return;
+        }
+    };
+
+    if event["protocol"].as_u64() != Some(1) {
+        state.protocol_error = Some("unsupported update progress protocol".to_string());
+        return;
+    }
+
+    match event["event"].as_str() {
+        Some("progress") => {
+            let progress = event["state"]["progress"]
+                .as_i64()
+                .unwrap_or(0)
+                .clamp(0, 100) as i32;
+            let detail = update_progress_detail(&event);
+            if event["state"]["phase"].as_str() == Some("failed") {
+                state.failure_message = Some(detail.clone());
+            }
+            report_update(callback, progress, &detail, line);
+        }
+        Some("finished") => {
+            state.final_code = event["code"].as_i64();
+            if event["code"].as_i64() != Some(0) {
+                state.failure_message = event["detail"]
+                    .as_str()
+                    .map(str::to_string)
+                    .or_else(|| {
+                        event["display"]["errorMessage"]
+                            .as_str()
+                            .map(str::to_string)
+                    })
+                    .or_else(|| state.failure_message.clone());
+            }
+        }
+        Some(other) => {
+            state.protocol_error = Some(format!("unexpected update event: {other}"));
+        }
+        None => {
+            state.protocol_error = Some("update event type is missing".to_string());
+        }
+    }
+}
+
+fn run_system_update(callback: &mut impl FnMut(Progress)) -> Result<(), String> {
+    const START_EVENT: &str = r#"{"protocol":1,"event":"progress","state":{"phase":"starting","progress":0},"display":{}}"#;
+    report_update(callback, 0, "Preparing system updates...", START_EVENT);
+
+    let mut child = Command::new("pkexec")
+        .arg(FLU_WORKER_PATH)
+        .args(["--installer", "--target-root", "/mnt"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("Failed to update installed system - {error}"))?;
+
+    let (sender, receiver) = std::sync::mpsc::channel::<Result<String, String>>();
+    let stdout_reader = child.stdout.take().map(|stdout| {
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                let event = line.map_err(|error| error.to_string());
+                if sender.send(event).is_err() {
+                    break;
+                }
+            }
+        })
+    });
+    let stderr_reader = child.stderr.take().map(|mut stderr| {
+        thread::spawn(move || {
+            let mut output = String::new();
+            let _ = stderr.read_to_string(&mut output);
+            output
+        })
+    });
+
+    let mut protocol = UpdateProtocolState::default();
+    let exit_status = loop {
+        match receiver.recv_timeout(Duration::from_millis(100)) {
+            Ok(Ok(line)) if !line.trim().is_empty() => {
+                handle_update_protocol_line(&line, &mut protocol, callback);
+            }
+            Ok(Ok(_)) => {}
+            Ok(Err(error)) => {
+                protocol.protocol_error = Some(format!("could not read progress data: {error}"));
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                thread::sleep(Duration::from_millis(50));
+            }
+        }
+
+        if let Some(status) = child
+            .try_wait()
+            .map_err(|error| format!("Failed to update installed system - {error}"))?
+        {
+            break status;
+        }
+    };
+
+    if let Some(reader) = stdout_reader {
+        let _ = reader.join();
+    }
+    while let Ok(event) = receiver.try_recv() {
+        match event {
+            Ok(line) if !line.trim().is_empty() => {
+                handle_update_protocol_line(&line, &mut protocol, callback);
+            }
+            Ok(_) => {}
+            Err(error) => {
+                protocol.protocol_error = Some(format!("could not read progress data: {error}"));
+            }
+        }
+    }
+
+    let stderr = stderr_reader
+        .and_then(|reader| reader.join().ok())
+        .unwrap_or_default();
+    let stderr_detail = stderr
+        .lines()
+        .map(str::trim)
+        .rfind(|line| !line.is_empty())
+        .map(str::to_string);
+
+    if exit_status.success() && protocol.final_code == Some(0) && protocol.protocol_error.is_none()
+    {
+        return Ok(());
+    }
+
+    let reason = protocol
+        .protocol_error
+        .or(protocol.failure_message)
+        .or(stderr_detail)
+        .unwrap_or_else(|| {
+            if protocol.final_code.is_none() {
+                "the updater exited without a successful final event".to_string()
+            } else {
+                "the updater reported a failure".to_string()
+            }
+        });
+    Err(format!("Failed to update installed system - {reason}"))
+}
+
 fn set_password(username: &str, password: &str) -> Result<(), String> {
     let mut child = Command::new("pkexec")
         .process_group(0)
@@ -868,7 +1092,7 @@ impl ConfigurationProgress {
         let (overall, configuration_percent) = if self.total > 0 {
             let completed = self.completed.min(self.total);
             (
-                78 + (completed * 20 / self.total) as i32,
+                78 + (completed * 17 / self.total) as i32,
                 completed * 100 / self.total,
             )
         } else {
@@ -972,6 +1196,7 @@ fn cancel_with_cleanup_if_requested(
 pub fn install(
     target_disk: &str,
     hostname: &str,
+    install_updates: bool,
     cancel_requested: &AtomicBool,
     mut callback: impl FnMut(Progress),
 ) -> Result<(), String> {
@@ -1040,6 +1265,9 @@ pub fn install(
 
     preinstallation_operation!(validate_target(target_disk));
     preinstallation_operation!(validate_fluffsetup_session_files());
+    if install_updates {
+        preinstallation_operation!(validate_system_update_files());
+    }
     preinstallation_operation!(check_cancelled(cancel_requested));
 
     report(&mut callback, 2, 0, 0, "Preparing...");
@@ -1433,6 +1661,19 @@ pub fn install(
         &["/mnt", "systemctl", "enable", "virtsecretd"],
     ));
     cancel_with_cleanup_if_requested(cancel_requested, swap_file)?;
+    if install_updates {
+        // FLU owns this transaction until its final event and process exit.
+        // Do not expose FluffInstall's process-killing cancellation path while
+        // Pacman may be applying updates to the target.
+        stop_tracking_for_cleanup();
+        cancel_requested.store(false, Ordering::Relaxed);
+        INSTALLATION_CANCEL_REQUESTED.store(false, Ordering::Release);
+        let update_result = run_system_update(&mut callback);
+        cancel_requested.store(false, Ordering::Relaxed);
+        INSTALLATION_CANCEL_REQUESTED.store(false, Ordering::Release);
+        INSTALLATION_CANCELLABLE.store(true, Ordering::Release);
+        installation_operation!(update_result);
+    }
     installation_operation!(run("swapoff", &[swap_file]));
     report(&mut callback, 98, 0, 0, "Finalizing installation...");
     installation_operation!(finalize_target());
@@ -1444,7 +1685,10 @@ pub fn install(
 
 #[cfg(test)]
 mod tests {
-    use super::{decode_lsblk_value, field, transaction_counter, verification_stage};
+    use super::{
+        UpdateProtocolState, decode_lsblk_value, field, handle_update_protocol_line,
+        transaction_counter, verification_stage,
+    };
 
     #[test]
     fn lsblk_fields_match_complete_keys_and_decode_spaces() {
@@ -1471,5 +1715,28 @@ mod tests {
 
         assert_eq!(first.4, Some((1, 2)));
         assert_eq!(second.4, Some((2, 2)));
+    }
+
+    #[test]
+    fn flu_protocol_keeps_progress_and_requires_successful_final_event() {
+        let mut state = UpdateProtocolState::default();
+        let mut updates = Vec::new();
+        handle_update_protocol_line(
+            r#"{"protocol":1,"event":"progress","state":{"phase":"installing","progress":60,"completed_packages":3,"total_packages":5},"display":{}}"#,
+            &mut state,
+            &mut |progress| updates.push(progress),
+        );
+        handle_update_protocol_line(
+            r#"{"protocol":1,"event":"finished","code":0,"state":{"phase":"complete"}}"#,
+            &mut state,
+            &mut |progress| updates.push(progress),
+        );
+
+        assert_eq!(updates.len(), 1);
+        assert_eq!(updates[0].completed, 60);
+        assert_eq!(updates[0].detail, "3 / 5 updates installed");
+        assert!(!updates[0].cancellation_allowed);
+        assert_eq!(state.final_code, Some(0));
+        assert!(state.protocol_error.is_none());
     }
 }
