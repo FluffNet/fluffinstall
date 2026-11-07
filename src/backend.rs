@@ -41,9 +41,11 @@ pub mod qobject {
         #[qproperty(i32, total_items, cxx_name = "totalItems")]
         #[qproperty(QString, status_message, cxx_name = "statusMessage")]
         #[qproperty(QString, detail_message, cxx_name = "detailMessage")]
+        #[qproperty(QString, update_event_json, cxx_name = "updateEventJson")]
         #[qproperty(QString, error_message, cxx_name = "errorMessage")]
         #[qproperty(bool, installing)]
         #[qproperty(bool, cancelling)]
+        #[qproperty(bool, cancellation_allowed, cxx_name = "cancellationAllowed")]
         #[qproperty(bool, finished)]
         type InstallerBackend = super::InstallerBackendRust;
 
@@ -69,6 +71,7 @@ pub mod qobject {
             self: Pin<&mut InstallerBackend>,
             target_disk: &QString,
             hostname: &QString,
+            install_updates: bool,
         );
 
         #[qinvokable]
@@ -93,9 +96,11 @@ pub struct InstallerBackendRust {
     total_items: i32,
     status_message: QString,
     detail_message: QString,
+    update_event_json: QString,
     error_message: QString,
     installing: bool,
     cancelling: bool,
+    cancellation_allowed: bool,
     finished: bool,
     cancel_requested: Arc<AtomicBool>,
 }
@@ -108,9 +113,11 @@ impl Default for InstallerBackendRust {
             total_items: 0,
             status_message: QString::from("Ready"),
             detail_message: QString::default(),
+            update_event_json: QString::default(),
             error_message: QString::default(),
             installing: false,
             cancelling: false,
+            cancellation_allowed: true,
             finished: false,
             cancel_requested: Arc::new(AtomicBool::new(false)),
         }
@@ -134,7 +141,12 @@ impl qobject::InstallerBackend {
         single_instance::take_activation_request()
     }
 
-    pub fn start_installation(mut self: Pin<&mut Self>, target_disk: &QString, hostname: &QString) {
+    pub fn start_installation(
+        mut self: Pin<&mut Self>,
+        target_disk: &QString,
+        hostname: &QString,
+        install_updates: bool,
+    ) {
         if *self.installing() || *self.finished() {
             return;
         }
@@ -144,12 +156,14 @@ impl qobject::InstallerBackend {
         self.cancel_requested.store(false, Ordering::Relaxed);
         self.as_mut().set_installing(true);
         self.as_mut().set_cancelling(false);
+        self.as_mut().set_cancellation_allowed(true);
         self.as_mut().set_finished(false);
         self.as_mut().set_error_message(QString::default());
         self.as_mut().set_overall_progress(0);
         self.as_mut().set_completed_items(0);
         self.as_mut().set_total_items(0);
         self.as_mut().set_detail_message(QString::default());
+        self.as_mut().set_update_event_json(QString::default());
         self.as_mut()
             .set_status_message(QString::from("Preparing..."));
 
@@ -161,6 +175,7 @@ impl qobject::InstallerBackend {
             let result = installer::install(
                 &target_disk,
                 &hostname,
+                install_updates,
                 cancel_requested.as_ref(),
                 |progress| {
                     let _ = qt_thread.queue(move |mut backend| {
@@ -173,6 +188,12 @@ impl qobject::InstallerBackend {
                         backend
                             .as_mut()
                             .set_detail_message(QString::from(&progress.detail));
+                        backend
+                            .as_mut()
+                            .set_update_event_json(QString::from(&progress.update_event_json));
+                        backend
+                            .as_mut()
+                            .set_cancellation_allowed(progress.cancellation_allowed);
                     });
                 },
             );
@@ -180,6 +201,7 @@ impl qobject::InstallerBackend {
             let _ = qt_thread.queue(move |mut backend| {
                 backend.as_mut().set_installing(false);
                 backend.as_mut().set_cancelling(false);
+                backend.as_mut().set_cancellation_allowed(true);
                 match result {
                     Ok(()) => {
                         backend.as_mut().set_finished(true);
@@ -204,7 +226,7 @@ impl qobject::InstallerBackend {
     }
 
     pub fn cancel_installation(mut self: Pin<&mut Self>) {
-        if !*self.installing() || *self.cancelling() {
+        if !*self.installing() || *self.cancelling() || !*self.cancellation_allowed() {
             return;
         }
         self.cancel_requested.store(true, Ordering::Relaxed);
