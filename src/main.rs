@@ -5,10 +5,13 @@ mod installer;
 mod single_instance;
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQuickStyle, QUrl};
+use std::ffi::c_void;
+use std::pin::Pin;
 use std::process::{Child, Command, Stdio};
 
 unsafe extern "C" {
     fn set_fluffinstall_window_icon();
+    fn configure_fluffinstall_qml_context(engine: *mut c_void);
 }
 
 struct SleepInhibitor {
@@ -61,7 +64,12 @@ fn main() {
     }
     QQuickStyle::set_style(&"Fusion".into());
 
-    if let Some(engine) = engine.as_mut() {
+    if let Some(mut engine) = engine.as_mut() {
+        unsafe {
+            configure_fluffinstall_qml_context(Pin::get_unchecked_mut(engine.as_mut())
+                as *mut QQmlApplicationEngine
+                as *mut c_void);
+        }
         engine.load(&QUrl::from(
             "qrc:/qt/qml/org/flufflinux/installer/qml/Main.qml",
         ));
