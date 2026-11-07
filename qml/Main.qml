@@ -28,7 +28,8 @@ ApplicationWindow {
     property string generatedHostname: ""
     property string lastDriveData: ""
     property string powerWarning: ""
-    property bool installUpdatesRequested: true
+    property bool installUpdatesRequested: false
+    property bool networkConnectionAvailable: false
     readonly property bool updatingSystem:
         backend.statusMessage.startsWith("Updating system")
     readonly property var updateEvent: {
@@ -248,6 +249,12 @@ ApplicationWindow {
             selectedDrive = 0
     }
 
+    function refreshNetworkConnection() {
+        networkConnectionAvailable = backend.hasNetworkConnection()
+        if (!networkConnectionAvailable)
+            updatesOption.checked = false
+    }
+
     function selectAdjacentDrive(direction) {
         if (page !== 1 || drives.length === 0 || direction === 0)
             return
@@ -417,7 +424,10 @@ ApplicationWindow {
         interval: 5000
         repeat: true
         running: window.page === 2
-        onTriggered: refreshPowerStatus()
+        onTriggered: {
+            refreshPowerStatus()
+            refreshNetworkConnection()
+        }
     }
 
     Connections {
@@ -851,6 +861,7 @@ ApplicationWindow {
             onVisibleChanged: {
                 if (visible) {
                     window.refreshPowerStatus()
+                    window.refreshNetworkConnection()
                     Qt.callLater(function() {
                         if (confirmationPage.visible)
                             noButton.forceActiveFocus(Qt.TabFocusReason)
@@ -981,8 +992,8 @@ ApplicationWindow {
                             id: updatesOption
                             anchors.fill: parent
                             text: "Download and install system updates"
-                            checked: true
-                            enabled: true
+                            checked: false
+                            enabled: window.networkConnectionAvailable
 
                             indicator: Rectangle {
                                 implicitWidth: 20
@@ -991,7 +1002,9 @@ ApplicationWindow {
                                 y: (updatesOption.height - height) / 2
                                 radius: 2
                                 border.width: 1
-                                border.color: updatesOption.activeFocus ? "#820101" : "#777777"
+                                border.color: !updatesOption.enabled ? "#aaaaaa"
+                                            : updatesOption.activeFocus ? "#820101"
+                                            : "#777777"
 
                                 gradient: Gradient {
                                     GradientStop { position: 0; color: "#eeeeee" }
@@ -1002,7 +1015,7 @@ ApplicationWindow {
                                     anchors.centerIn: parent
                                     visible: updatesOption.checked
                                     text: "✓"
-                                    color: "#202020"
+                                    color: updatesOption.enabled ? "#202020" : "#999999"
                                     font.pixelSize: 14
                                     font.weight: Font.DemiBold
                                 }
@@ -1012,7 +1025,7 @@ ApplicationWindow {
                                 leftPadding: updatesOption.indicator.width + updatesOption.spacing
                                 text: updatesOption.text
                                 font: updatesOption.font
-                                color: "#202020"
+                                color: updatesOption.enabled ? "#202020" : "#999999"
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
                             }
@@ -1026,7 +1039,9 @@ ApplicationWindow {
                         }
 
                         ToolTip.visible: updatesOptionHover.containsMouse
-                        ToolTip.text: "Updates are installed before FluffInstall finalizes the installation."
+                        ToolTip.text: window.networkConnectionAvailable
+                                      ? "Updates are installed before FluffInstall finalizes the installation."
+                                      : "Connect to a network to install system updates."
                     }
 
                     Item { Layout.fillWidth: true }
