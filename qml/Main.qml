@@ -28,6 +28,8 @@ ApplicationWindow {
     property string generatedHostname: ""
     property string lastDriveData: ""
     property string powerWarning: ""
+    property bool installUpdatesRequested: false
+    property bool networkConnectionAvailable: false
 
     // One shared button style keeps every installer action the same size and
     // contrast while still showing keyboard focus clearly.
@@ -85,6 +87,7 @@ ApplicationWindow {
         required property string waitingText
         required property string activeText
         required property string completedText
+        property string failedText: waitingText
         property string detailText: ""
         readonly property string stepState: window.installationStepState(step)
 
@@ -154,7 +157,8 @@ ApplicationWindow {
 
             Label {
                 text: stepState === "completed" ? completedText
-                    : stepState === "active" ? activeText : waitingText
+                    : stepState === "active" ? activeText
+                    : stepState === "failed" ? failedText : waitingText
                 font.pixelSize: 15
                 font.weight: stepState === "active" ? Font.DemiBold : Font.Normal
                 color: stepState === "failed" ? "#b3261e"
@@ -166,12 +170,14 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
 
-            Label {
+            Text {
                 visible: stepState === "active" && detailText.length > 0
                 text: detailText
                 font.pixelSize: 12
+                fontSizeMode: step === 5 ? Text.HorizontalFit : Text.FixedSize
+                minimumPixelSize: step === 5 ? 9 : 12
                 color: "#65758b"
-                wrapMode: Text.WordWrap
+                wrapMode: step === 5 ? Text.NoWrap : Text.WordWrap
                 Layout.fillWidth: true
             }
         }
@@ -236,6 +242,12 @@ ApplicationWindow {
             selectedDrive = 0
     }
 
+    function refreshNetworkConnection() {
+        networkConnectionAvailable = backend.hasNetworkConnection()
+        if (!networkConnectionAvailable)
+            updatesOption.checked = false
+    }
+
     function selectAdjacentDrive(direction) {
         if (page !== 1 || drives.length === 0 || direction === 0)
             return
@@ -264,11 +276,13 @@ ApplicationWindow {
             return 2
         if (backend.overallProgress < 78)
             return 3
-        if (backend.overallProgress < 98)
+        if (backend.overallProgress < 95)
             return 4
-        if (backend.overallProgress < 100)
+        if (backend.overallProgress < 98)
             return 5
-        return 6
+        if (backend.overallProgress < 100)
+            return 6
+        return 7
     }
 
     function failedInstallationStep() {
@@ -287,7 +301,9 @@ ApplicationWindow {
         if (error.includes("failed to configure")
                 || error.includes("bootloader"))
             return 4
-        return Math.min(progressInstallationStep(), 5)
+        if (error.includes("failed to update installed system"))
+            return 5
+        return Math.min(progressInstallationStep(), 6)
     }
 
     function activeInstallationStep() {
@@ -295,6 +311,12 @@ ApplicationWindow {
             return failedInstallationStep()
 
         const status = backend.statusMessage
+        if (status.startsWith("Preparing system updates")
+                || status.startsWith("Downloading updates")
+                || status.startsWith("Installing updates")
+                || status.startsWith("Finishing system updates")
+                || status.startsWith("Updating system"))
+            return 5
         if (status.startsWith("Preparing"))
             return 0
         if (status.startsWith("Formatting"))
@@ -308,13 +330,15 @@ ApplicationWindow {
         if (status.startsWith("Configuring system"))
             return 4
         if (status.startsWith("Finalizing"))
-            return 5
+            return 6
         return progressInstallationStep()
     }
 
     function installationStepState(step) {
         // A failed or cancelled operation keeps completed steps visible and
         // marks only the step that was active when work stopped.
+        if (step === 5 && backend.updateFailed)
+            return "failed"
         if (backend.finished || backend.overallProgress >= 100)
             return "completed"
 
@@ -345,6 +369,8 @@ ApplicationWindow {
                     + " system packages installed"
         if (step === 4)
             return backend.detailMessage
+        if (step === 5)
+            return backend.detailMessage
         return ""
     }
 
@@ -358,7 +384,8 @@ ApplicationWindow {
     }
 
     function showCancellationDialog() {
-        if (window.page !== 3 || !backend.installing || backend.cancelling)
+        if (window.page !== 3 || !backend.installing || backend.cancelling
+                || !backend.cancellationAllowed)
             return
 
         cancelWindow.show()
@@ -369,7 +396,8 @@ ApplicationWindow {
     onClosing: function(close) {
         if (window.page === 3 && backend.installing) {
             close.accepted = false
-            window.showCancellationDialog()
+            if (backend.cancellationAllowed)
+                window.showCancellationDialog()
         }
     }
 
@@ -397,7 +425,10 @@ ApplicationWindow {
         interval: 5000
         repeat: true
         running: window.page === 2
-        onTriggered: refreshPowerStatus()
+        onTriggered: {
+            refreshPowerStatus()
+            refreshNetworkConnection()
+        }
     }
 
     Connections {
@@ -518,7 +549,7 @@ ApplicationWindow {
                 anchors.bottom: parent.bottom
                 anchors.rightMargin: 22
                 anchors.bottomMargin: 16
-                text: "fluffinstall 1.1"
+                text: "fluffinstall 1.5"
                 color: "#202020"
                 font.pixelSize: 11
             }
@@ -831,6 +862,7 @@ ApplicationWindow {
             onVisibleChanged: {
                 if (visible) {
                     window.refreshPowerStatus()
+                    window.refreshNetworkConnection()
                     Qt.callLater(function() {
                         if (confirmationPage.visible)
                             noButton.forceActiveFocus(Qt.TabFocusReason)
@@ -960,9 +992,9 @@ ApplicationWindow {
                         CheckBox {
                             id: updatesOption
                             anchors.fill: parent
-                            text: "Download and install updates after installation has finished"
+                            text: "Download and install system updates"
                             checked: false
-                            enabled: false
+                            enabled: window.networkConnectionAvailable
 
                             indicator: Rectangle {
                                 implicitWidth: 20
@@ -971,7 +1003,9 @@ ApplicationWindow {
                                 y: (updatesOption.height - height) / 2
                                 radius: 2
                                 border.width: 1
-                                border.color: "#9a9a9a"
+                                border.color: !updatesOption.enabled ? "#aaaaaa"
+                                            : updatesOption.activeFocus ? "#820101"
+                                            : "#777777"
 
                                 gradient: Gradient {
                                     GradientStop { position: 0; color: "#eeeeee" }
@@ -982,7 +1016,7 @@ ApplicationWindow {
                                     anchors.centerIn: parent
                                     visible: updatesOption.checked
                                     text: "✓"
-                                    color: "#555555"
+                                    color: updatesOption.enabled ? "#202020" : "#999999"
                                     font.pixelSize: 14
                                     font.weight: Font.DemiBold
                                 }
@@ -992,7 +1026,7 @@ ApplicationWindow {
                                 leftPadding: updatesOption.indicator.width + updatesOption.spacing
                                 text: updatesOption.text
                                 font: updatesOption.font
-                                color: "#777777"
+                                color: updatesOption.enabled ? "#202020" : "#999999"
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
                             }
@@ -1006,7 +1040,9 @@ ApplicationWindow {
                         }
 
                         ToolTip.visible: updatesOptionHover.containsMouse
-                        ToolTip.text: "System updates will be available in a future version of FluffInstall."
+                        ToolTip.text: window.networkConnectionAvailable
+                                      ? "Updates are installed before FluffInstall finalizes the installation."
+                                      : "Connect to a network to install system updates."
                     }
 
                     Item { Layout.fillWidth: true }
@@ -1143,10 +1179,12 @@ ApplicationWindow {
                                 window.refreshPowerStatus()
                                 if (window.powerWarning.length > 0)
                                     return
+                                window.installUpdatesRequested = updatesOption.checked
                                 window.showPage(3)
                                 backend.startInstallation(
                                     "/dev/" + drives[selectedDrive].device,
-                                    generatedHostname
+                                    generatedHostname,
+                                    window.installUpdatesRequested
                                 )
                             }
                         }
@@ -1276,7 +1314,8 @@ ApplicationWindow {
                             Layout.preferredWidth: 120
                             onClicked: {
                                 if (!cancelWindow.visible || window.page !== 3
-                                        || !backend.installing)
+                                        || !backend.installing
+                                        || !backend.cancellationAllowed)
                                     return
                                 cancelWindow.close()
                                 backend.cancelInstallation()
@@ -1300,6 +1339,10 @@ ApplicationWindow {
                 target: backend
                 function onInstallingChanged() {
                     if (!backend.installing && cancelWindow.visible)
+                        cancelWindow.close()
+                }
+                function onCancellationAllowedChanged() {
+                    if (!backend.cancellationAllowed && cancelWindow.visible)
                         cancelWindow.close()
                 }
                 function onErrorMessageChanged() {
@@ -1353,6 +1396,7 @@ ApplicationWindow {
 
                         ColumnLayout {
                             Layout.preferredWidth: 260
+                            Layout.alignment: Qt.AlignTop
                             spacing: 7
 
                             InstallationStep {
@@ -1375,17 +1419,27 @@ ApplicationWindow {
                                 completedText: "Verified system files"
                                 detailText: window.installationStepDetail(2)
                             }
+                            InstallationStep {
+                                step: 3
+                                visible: window.installUpdatesRequested
+                                waitingText: "Install system files"
+                                activeText: "Installing system..."
+                                completedText: "Installed system"
+                                detailText: window.installationStepDetail(3)
+                            }
                         }
 
                         ColumnLayout {
                             Layout.preferredWidth: 260
+                            Layout.alignment: Qt.AlignTop
                             spacing: 7
 
                             InstallationStep {
                                 step: 3
+                                visible: !window.installUpdatesRequested
                                 waitingText: "Install system files"
-                                activeText: "Installing system files..."
-                                completedText: "Installed system files"
+                                activeText: "Installing system..."
+                                completedText: "Installed system"
                                 detailText: window.installationStepDetail(3)
                             }
                             InstallationStep {
@@ -1397,12 +1451,24 @@ ApplicationWindow {
                             }
                             InstallationStep {
                                 step: 5
+                                visible: window.installUpdatesRequested
+                                waitingText: "Update system"
+                                activeText: backend.statusMessage
+                                completedText: "Updated system"
+                                failedText: backend.updateFailed
+                                            ? "System update skipped"
+                                            : "System update failed"
+                                detailText: window.installationStepDetail(5)
+                            }
+                            InstallationStep {
+                                step: 6
                                 waitingText: "Finalize installation"
                                 activeText: "Finalizing installation..."
                                 completedText: "Finalized installation"
                             }
                         }
                     }
+
                 }
 
                 Label {
